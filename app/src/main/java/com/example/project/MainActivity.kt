@@ -1,24 +1,15 @@
 package com.example.project
 
-import android.annotation.SuppressLint
-import android.content.Intent
-import android.content.pm.PackageInfo
+
 import android.content.pm.PackageManager
-import android.content.pm.Signature
-import android.graphics.Color
 import android.os.Bundle
-import android.util.Base64
-import android.util.Log
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import net.daum.mf.map.api.MapPOIItem
 import net.daum.mf.map.api.MapPoint
-import net.daum.mf.map.api.MapPolyline
 import net.daum.mf.map.api.MapView
-import java.security.MessageDigest
-import java.security.NoSuchAlgorithmException
-
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
     private var gpsUse: Boolean? = null
@@ -26,6 +17,9 @@ class MainActivity : AppCompatActivity() {
     private var gpsLng: Double? = null
     private lateinit var mapView: MapView
 
+    private val locationService: LocationServiceExample by lazy {
+        LocationServiceExample(this)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -35,6 +29,33 @@ class MainActivity : AppCompatActivity() {
         mapViewContainer.addView(mapView)
 
         gpsCheck()
+
+        // 위치 권한 체크 및 요청
+        checkLocationPermission()
+
+        // 위치 서비스 시작
+        locationService.startLocationUpdates()
+
+
+    }
+
+
+    override fun onDestroy() {
+        // 위치 서비스 중지
+        locationService.stopLocationUpdates()
+        super.onDestroy()
+    }
+
+    private fun checkLocationPermission() {
+        val permission = android.Manifest.permission.ACCESS_FINE_LOCATION
+        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            // 권한이 없는 경우 권한 요청
+            ActivityCompat.requestPermissions(this, arrayOf(permission), REQUEST_LOCATION_PERMISSION)
+        }
+    }
+
+    companion object {
+        private const val REQUEST_LOCATION_PERMISSION = 1
     }
 
     private fun gpsCheck() {
@@ -68,4 +89,5 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
 }
