@@ -1,6 +1,7 @@
 package com.example.project
 
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.ViewGroup
@@ -23,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
 
         mapView = MapView(this)
         val mapViewContainer: ViewGroup = findViewById(R.id.map_view)

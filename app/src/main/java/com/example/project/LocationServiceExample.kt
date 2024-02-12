@@ -98,11 +98,6 @@ class LocationServiceExample(private val context: Context) {
         }
 
 
-
-
-
-
-
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
             // 위치 공급자 상태 변경 시 호출
         }
