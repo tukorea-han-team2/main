@@ -1,23 +1,27 @@
 package com.example.project
 
 import android.content.Context
-import android.location.Address
-import android.location.Geocoder
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
-import android.os.Build
+import android.os.AsyncTask
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
+import org.json.JSONArray
+import org.json.JSONException
+import java.io.BufferedReader
 import java.io.IOException
-import java.util.*
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 
 class LocationServiceExample(private val context: Context) {
 
     private var locationManager: LocationManager? = null
+    private lateinit var myLocationListener: MyLocationListener
 
     init {
         // 위치 관리자 초기화
@@ -29,13 +33,13 @@ class LocationServiceExample(private val context: Context) {
 
     fun startLocationUpdates() {
         // 위치 업데이트를 받을 LocationListener 등록
-        val locationListener = MyLocationListener()
+        myLocationListener = MyLocationListener()
         try {
             locationManager?.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
                 0, // 업데이트 간격 (0: 가능한 빠르게)
                 0f, // 업데이트 간격 (미터 단위)
-                locationListener
+                myLocationListener
             )
         } catch (e: SecurityException) {
             e.printStackTrace()
@@ -44,106 +48,136 @@ class LocationServiceExample(private val context: Context) {
 
     fun stopLocationUpdates() {
         // 위치 업데이트 중지
-        locationManager?.removeUpdates(MyLocationListener())
+        locationManager?.removeUpdates(myLocationListener)
     }
 
-    private var previousLocality: String? = null
-    private var previousSubLocality: String? = null
-
     private inner class MyLocationListener : LocationListener {
-
-        private var previousCity: String? = null
-
         override fun onLocationChanged(location: Location) {
+            // 위치가 변경될 때 호출됩니다.
+            // 새로운 위치 정보를 처리하는 코드를 여기에 추가하세요.
             val latitude = location.latitude
             val longitude = location.longitude
-            val newAddress = getAddressFromLocation(latitude, longitude)
 
-            // 주소 정보를 Geocoder를 사용하여 다시 가져오기
-            //val (newCity, newSubLocality) = extractCityAndSubLocalityFromAddress(context, latitude, longitude)
-            val newCity = extractCityFromAddress(context, latitude, longitude)
-            //val newSubLocality = extractCityFromAddress(context, latitude, longitude)
 
-            // 주소가 변경되었을 때 진동 울림
-            if (newCity != previousCity) {
-                vibrate()
-                previousCity = newCity
-                println("City changed! New City: $newCity, New Address: $newAddress")
-            }
-
-            println("현재 주소: $newAddress") // 주소 확인용 출력 추가
+            // CTPRVN_CD 확인 및 출력
+            fetchAndShowCTPRVN_CD(latitude, longitude)
         }
-
-        // 특정 주소 구성 요소 추출 함수
-        private fun extractCityFromAddress(context: Context, latitude: Double, longitude: Double): String? {
-            val geocoder = Geocoder(context, Locale.getDefault())
-            val addresses: List<Address>? = geocoder.getFromLocation(latitude, longitude, 1)
-
-            return addresses?.firstOrNull()?.locality
-        }
-
-        private fun extractCityAndSubLocalityFromAddress(context: Context, latitude: Double, longitude: Double): Pair<String?, String?> {
-            val geocoder = Geocoder(context, Locale.getDefault())
-            val address = getAddressFromLocation(latitude, longitude)
-
-            // 주소 정보를 조합
-            val newAddress = buildString {
-                append("$address ")
-            }
-
-            println("Geocoder result - Address: $address")
-            println("Combined Address: $newAddress")
-
-            return Pair(null, null) // 이 부분을 지번 주소에서 추출된 값으로 변경
-        }
-
 
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
-            // 위치 공급자 상태 변경 시 호출
+            // 위치 공급자의 상태가 변경될 때 호출됩니다.
+            // 예를 들어, GPS가 사용 가능해지거나 사용 불가능해질 때 호출됩니다.
         }
 
         override fun onProviderEnabled(provider: String) {
-            // 위치 공급자가 사용 가능해질 때 호출
+            // 위치 공급자가 사용 가능해질 때 호출됩니다.
         }
 
         override fun onProviderDisabled(provider: String) {
-            // 위치 공급자가 사용 불가능해질 때 호출
+            // 위치 공급자가 사용 불가능해질 때 호출됩니다.
         }
+    }
 
-        private fun vibrate() {
-            val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator?
+    // 토스트 메시지 출력 함수
+    private fun showToast(message: String) {
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+    }
 
-            // 디바이스에 진동기가 있는지 및 권한이 부여되었는지 확인
-            if (vibrator != null && vibrator.hasVibrator()) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vibrator.vibrate(
-                        VibrationEffect.createOneShot(1000, VibrationEffect.DEFAULT_AMPLITUDE)
-                    )
+    // 사용자 위치에 대한 CTPRVN_CD 확인 및 출력 함수
+    private fun fetchAndShowCTPRVN_CD(latitude: Double, longitude: Double) {
+        AsyncTask.execute {
+            try {
+                val url = URL("https://cha8041.pythonanywhere.com/senddata/sido")
+                val connection = url.openConnection() as HttpURLConnection
+                connection.requestMethod = "GET"
+
+                val responseCode = connection.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val inputStream = connection.inputStream
+                    val reader = BufferedReader(InputStreamReader(inputStream))
+                    val response = StringBuilder()
+                    var line: String?
+                    while (reader.readLine().also { line = it } != null) {
+                        response.append(line)
+                    }
+
+                    val jsonArray = JSONArray(response.toString())
+                    val ctpCode = getCTPRVN_CD(latitude, longitude, jsonArray)
+
+                    // UI 스레드에서 토스트 메시지를 표시
+                    Handler(Looper.getMainLooper()).post {
+                        showToast(ctpCode ?: "CTPRVN_CD not found")
+                    }
                 } else {
-                    // Android Oreo 이전 버전을 위한 코드
-                    vibrator.vibrate(1000)
+                    // UI 스레드에서 토스트 메시지를 표시
+                    Handler(Looper.getMainLooper()).post {
+                        showToast("Failed to fetch data")
+                    }
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+                Log.e("LocationServiceExample", "Error fetching location information: ${e.message}")
+                // UI 스레드에서 토스트 메시지를 표시
+                Handler(Looper.getMainLooper()).post {
+                    showToast("Error fetching location information")
+                }
+            } catch (e: JSONException) {
+                e.printStackTrace()
+                Log.e("LocationServiceExample", "Error parsing JSON response: ${e.message}")
+                // UI 스레드에서 토스트 메시지를 표시
+                Handler(Looper.getMainLooper()).post {
+                    showToast("Error parsing JSON response")
                 }
             }
         }
     }
 
 
-    private fun getAddressFromLocation(latitude: Double, longitude: Double): String {
-        val geocoder = Geocoder(context, Locale.getDefault())
-       var addressText = "주소를 가져오는 중 오류가 발생했습니다."
 
-       try {
-           val addresses: List<Address>? = geocoder.getFromLocation(latitude, longitude, 1)
-           if (!addresses.isNullOrEmpty()) {
-              val address: Address = addresses[0]
-             addressText = address.getAddressLine(0)
+
+
+
+
+
+    // 주어진 위치의 "CTPRVN_CD"를 반환하는 함수
+    private fun getCTPRVN_CD(latitude: Double, longitude: Double, sidoData: JSONArray): String? {
+        for (i in 0 until sidoData.length()) {
+            val feature = sidoData.getJSONObject(i)
+            val geometry = feature.getJSONObject("geometry")
+            val coordinates = geometry.getJSONArray("coordinates").getJSONArray(0)
+            if (isLocationInsidePolygon(latitude, longitude, coordinates)) {
+                val properties = feature.getJSONObject("properties")
+                return properties.getString("CTPRVN_CD")
             }
-       } catch (e: IOException) {
-           e.printStackTrace()
-       }
-
-       return addressText
+        }
+        return null
     }
+
+    // 주어진 위치가 다각형 내에 있는지 확인하는 함수
+    private fun isLocationInsidePolygon(latitude: Double, longitude: Double, coordinates: JSONArray): Boolean {
+        var isInside = false
+        for (i in 0 until coordinates.length()) {
+            val polygon = coordinates.getJSONArray(i)
+            var j = polygon.length() - 1
+            var intersect = false
+            for (k in 0 until polygon.length()) {
+                val xi = polygon.getJSONArray(k).getDouble(0)
+                val yi = polygon.getJSONArray(k).getDouble(1)
+                val xj = polygon.getJSONArray(j).getDouble(0)
+                val yj = polygon.getJSONArray(j).getDouble(1)
+
+                // 다각형의 각 변과 주어진 점 사이의 관계를 확인합니다.
+                if (yi < longitude && yj >= longitude || yj < longitude && yi >= longitude) {
+                    if (xi + (longitude - yi) / (yj - yi) * (xj - xi) < latitude) {
+                        intersect = !intersect
+                    }
+                }
+                j = k
+            }
+            isInside = if (intersect) !isInside else isInside
+        }
+        return isInside
+    }
+
+
+
 }
-
-

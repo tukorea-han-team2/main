@@ -1,46 +1,52 @@
 package com.example.project
 
-
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
+import androidx.appcompat.app.AppCompatActivity
+import android.os.Vibrator
 import android.view.ViewGroup
 import android.widget.Toast
-import net.daum.mf.map.api.MapPoint
-import net.daum.mf.map.api.MapView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import net.daum.mf.map.api.MapView
 
-class MainActivity : AppCompatActivity() {
-    private var gpsUse: Boolean? = null
-    private var gpsLat: Double? = null
-    private var gpsLng: Double? = null
+class MainActivity : AppCompatActivity(){
     private lateinit var mapView: MapView
+    private lateinit var vibrator: Vibrator
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationService: LocationServiceExample
+    private var gpsUse: Boolean? = null
 
-    private val locationService: LocationServiceExample by lazy {
-        LocationServiceExample(this)
-    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
 
         mapView = MapView(this)
         val mapViewContainer: ViewGroup = findViewById(R.id.map_view)
         mapViewContainer.addView(mapView)
 
-        gpsCheck()
+        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
+
+        // FusedLocationProviderClient 초기화
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        // 위치 서비스 초기화
+        locationService = LocationServiceExample(this)
 
         // 위치 권한 체크 및 요청
         checkLocationPermission()
 
+        // GPS 체크
+        gpsCheck()
+
         // 위치 서비스 시작
         locationService.startLocationUpdates()
 
-
+        // 서버로부터 데이터 받아오기
+        FetchDataFromServerTask(this, mapView).execute()
     }
-
 
     override fun onDestroy() {
         // 위치 서비스 중지
@@ -54,10 +60,6 @@ class MainActivity : AppCompatActivity() {
             // 권한이 없는 경우 권한 요청
             ActivityCompat.requestPermissions(this, arrayOf(permission), REQUEST_LOCATION_PERMISSION)
         }
-    }
-
-    companion object {
-        private const val REQUEST_LOCATION_PERMISSION = 1
     }
 
     private fun gpsCheck() {
@@ -80,11 +82,17 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun showToast(message: String) {
+        runOnUiThread {
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                showLocation()
+                locationService.startLocationUpdates()
             } else {
                 Toast.makeText(this, "위치 권한이 거부되어 GPS 기능을 사용할 수 없습니다.", Toast.LENGTH_SHORT).show()
                 gpsUse = false
@@ -92,4 +100,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    companion object {
+        private const val REQUEST_LOCATION_PERMISSION = 1
+    }
 }
