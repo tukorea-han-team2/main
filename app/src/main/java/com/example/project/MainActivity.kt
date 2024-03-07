@@ -2,35 +2,36 @@ package com.example.project
 
 import android.content.pm.PackageManager
 import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import android.os.Vibrator
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import net.daum.mf.map.api.MapView
 
-class MainActivity : AppCompatActivity(){
-    private lateinit var mapView: MapView
-    private lateinit var vibrator: Vibrator
+class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var mapView: MapView
     private lateinit var locationService: LocationServiceExample
+    private lateinit var fetchDataFromServerTask: FetchDataFromServerTask
     private var gpsUse: Boolean? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // FusedLocationProviderClient 초기화
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        // MapView 초기화
         mapView = MapView(this)
         val mapViewContainer: ViewGroup = findViewById(R.id.map_view)
         mapViewContainer.addView(mapView)
 
-        vibrator = getSystemService(VIBRATOR_SERVICE) as Vibrator
-
-        // FusedLocationProviderClient 초기화
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        // FetchDataFromServerTask 초기화
+        fetchDataFromServerTask = FetchDataFromServerTask(this, mapView)
 
         // 위치 서비스 초기화
         locationService = LocationServiceExample(this)
@@ -44,14 +45,10 @@ class MainActivity : AppCompatActivity(){
         // 위치 서비스 시작
         locationService.startLocationUpdates()
 
-        // 서버로부터 데이터 받아오기
-        FetchDataFromServerTask(this, mapView).execute()
-    }
+        // 현재 위치 가져오기
+        fetchCurrentLocation()
 
-    override fun onDestroy() {
-        // 위치 서비스 중지
-        locationService.stopLocationUpdates()
-        super.onDestroy()
+        FetchDataFromServerTask(this, mapView).execute()
     }
 
     private fun checkLocationPermission() {
@@ -82,20 +79,42 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
-    fun showToast(message: String) {
-        runOnUiThread {
-            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+    private fun fetchCurrentLocation() {
+        // 위치 권한이 있는지 확인
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return
         }
+
+        // 현재 위치 가져오기
+        fusedLocationClient.lastLocation
+            .addOnSuccessListener { location ->
+                // 위치를 성공적으로 가져왔을 때 실행되는 콜백
+                location?.let {
+                    val latitude = it.latitude
+                    val longitude = it.longitude
+
+                    LocationServiceExample(this)
+                    // FetchDataFromServerTask 실행
+                    FetchDataFromServerTask(this, mapView).execute()
+                }
+            }
+            .addOnFailureListener { e ->
+                // 위치를 가져오지 못했을 때 실행되는 콜백
+                e.printStackTrace()
+            }
     }
+
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 1) {
+        if (requestCode == REQUEST_LOCATION_PERMISSION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                locationService.startLocationUpdates()
+                // 위치 권한이 허용되면 현재 위치 가져오기
+                fetchCurrentLocation()
             } else {
-                Toast.makeText(this, "위치 권한이 거부되어 GPS 기능을 사용할 수 없습니다.", Toast.LENGTH_SHORT).show()
-                gpsUse = false
+                // 위치 권한이 거부되면 메시지 표시
+                Toast.makeText(this, "위치 권한이 거부되어 현재 위치를 가져올 수 없습니다.", Toast.LENGTH_SHORT).show()
             }
         }
     }

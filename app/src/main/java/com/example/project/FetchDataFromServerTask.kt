@@ -3,23 +3,19 @@ package com.example.project
 import android.content.Context
 import android.graphics.Color
 import android.os.AsyncTask
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
 import net.daum.mf.map.api.MapPOIItem
 import net.daum.mf.map.api.MapPoint
 import net.daum.mf.map.api.MapPolyline
 import net.daum.mf.map.api.MapView
-import org.json.JSONException
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
-import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
-class FetchDataFromServerTask(private val context: Context, private val mapView: MapView) : AsyncTask<Void, Void, Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>>() {
 
+class FetchDataFromServerTask(private val context: Context, private val mapView: MapView) : AsyncTask<Void, Void, Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>>() {
 
     override fun doInBackground(vararg params: Void?): Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>? {
         val trafficMarkers = fetchTrafficData()
@@ -70,9 +66,7 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
                     }
                 }
             }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } catch (e: JSONException) {
+        } catch (e: Exception) {
             e.printStackTrace()
         }
 
@@ -83,7 +77,7 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
         val polygons = mutableListOf<List<Pair<Double, Double>>>()
 
         try {
-            val urlPolygon = URL("https://cha8041.pythonanywhere.com/senddata/sido")
+            val urlPolygon = URL("https://cha8041.pythonanywhere.com/senddata/sido1")
             val connectionPolygon = urlPolygon.openConnection() as HttpURLConnection
             connectionPolygon.requestMethod = "GET"
             connectionPolygon.connect()
@@ -116,9 +110,7 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
                     polygons.add(points)
                 }
             }
-        } catch (e: IOException) {
-            e.printStackTrace()
-        } catch (e: JSONException) {
+        } catch (e: Exception) {
             e.printStackTrace()
         }
 
@@ -127,9 +119,9 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
 
     override fun onPostExecute(result: Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>?) {
         super.onPostExecute(result)
-        result?.let { pair ->
-            val markers = pair.first
-            val polygons = pair.second
+        result?.let { Pair ->
+            val markers = Pair.first
+            val polygons = Pair.second
 
             markers.forEach { marker ->
                 mapView.addPOIItem(marker)
@@ -143,7 +135,7 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
                 polyline.lineColor = Color.argb(128, 255, 0, 0)
                 mapView.addPolyline(polyline)
             }
-
         }
     }
+
 }

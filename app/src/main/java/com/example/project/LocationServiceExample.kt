@@ -6,14 +6,10 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.AsyncTask
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.widget.Toast
 import org.json.JSONArray
-import org.json.JSONException
+import org.json.JSONObject
 import java.io.BufferedReader
-import java.io.IOException
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
@@ -58,9 +54,8 @@ class LocationServiceExample(private val context: Context) {
             val latitude = location.latitude
             val longitude = location.longitude
 
-
-            // CTPRVN_CD 확인 및 출력
-            fetchAndShowCTPRVN_CD(latitude, longitude)
+            // AsyncTask를 통해 백그라운드에서 네트워크 호출 수행
+            FetchDataTask(context).execute(latitude, longitude)
         }
 
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
@@ -77,19 +72,29 @@ class LocationServiceExample(private val context: Context) {
         }
     }
 
-    // 토스트 메시지 출력 함수
-    private fun showToast(message: String) {
-        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-    }
+    // AsyncTask 클래스 정의
+    private inner class FetchDataTask(private val context: Context) : AsyncTask<Double, Void, String?>() {
 
-    // 사용자 위치에 대한 CTPRVN_CD 확인 및 출력 함수
-    private fun fetchAndShowCTPRVN_CD(latitude: Double, longitude: Double) {
-        AsyncTask.execute {
+        override fun doInBackground(vararg params: Double?): String? {
+            val latitude = params[0]
+            val longitude = params[1]
+
+            // 백그라운드에서 네트워크 호출 수행하여 시/도 코드 반환
+            return fetchData(latitude, longitude)
+        }
+
+        override fun onPostExecute(result: String?) {
+            // 네트워크 호출 완료 후 UI 업데이트 등을 수행
+            Toast.makeText(context, "시/도 코드: $result", Toast.LENGTH_SHORT).show()
+        }
+
+        // 네트워크 호출을 수행하는 함수
+        private fun fetchData(latitude: Double?, longitude: Double?): String? {
             try {
-                val url = URL("https://cha8041.pythonanywhere.com/senddata/sido")
+                val url = URL("https://cha8041.pythonanywhere.com/senddata/sido1")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
-
+                connection.connect()
                 val responseCode = connection.responseCode
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     val inputStream = connection.inputStream
@@ -99,85 +104,56 @@ class LocationServiceExample(private val context: Context) {
                     while (reader.readLine().also { line = it } != null) {
                         response.append(line)
                     }
+                    val jsonObject = JSONObject(response.toString())
+                    val jsonArray = jsonObject.getJSONArray("features")
 
-                    val jsonArray = JSONArray(response.toString())
-                    val ctpCode = getCTPRVN_CD(latitude, longitude, jsonArray)
+                    // 주어진 위치의 위도와 경도를 사용하여 시/도 코드를 결정
+                    if (latitude != null && longitude != null) {
+                        for (i in 0 until jsonArray.length()) {
+                            val feature = jsonArray.getJSONObject(i)
+                            val geometry = feature.getJSONObject("geometry")
+                            val coordinates = geometry.getJSONArray("coordinates")
+                            val properties = feature.getJSONObject("properties")
 
-                    // UI 스레드에서 토스트 메시지를 표시
-                    Handler(Looper.getMainLooper()).post {
-                        showToast(ctpCode ?: "CTPRVN_CD not found")
+                            // 현재 위치가 다각형 내부에 있는지 확인
+                            if (isLocationInsidePolygon(latitude, longitude, coordinates)) {
+                                return properties.getString("SIG_KOR_NM")
+                            }
+                        }
                     }
-                } else {
-                    // UI 스레드에서 토스트 메시지를 표시
-                    Handler(Looper.getMainLooper()).post {
-                        showToast("Failed to fetch data")
-                    }
                 }
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 e.printStackTrace()
-                Log.e("LocationServiceExample", "Error fetching location information: ${e.message}")
-                // UI 스레드에서 토스트 메시지를 표시
-                Handler(Looper.getMainLooper()).post {
-                    showToast("Error fetching location information")
-                }
-            } catch (e: JSONException) {
-                e.printStackTrace()
-                Log.e("LocationServiceExample", "Error parsing JSON response: ${e.message}")
-                // UI 스레드에서 토스트 메시지를 표시
-                Handler(Looper.getMainLooper()).post {
-                    showToast("Error parsing JSON response")
-                }
+                return "데이터를 가져오는 중 오류가 발생했습니다."
             }
+            return null
         }
-    }
 
+        // 주어진 위치가 다각형 내부에 있는지 확인하는 함수
+        private fun isLocationInsidePolygon(latitude: Double, longitude: Double, coordinates: JSONArray): Boolean {
+            var isInside = false
+            for (i in 0 until coordinates.length()) {
+                val polygon = coordinates.getJSONArray(i)
+                var j = polygon.length() - 1
+                var intersect = false
+                for (k in 0 until polygon.length()) {
+                    val yi = polygon.getJSONArray(k).getDouble(0)
+                    val xi = polygon.getJSONArray(k).getDouble(1)
+                    val yj = polygon.getJSONArray(j).getDouble(0)
+                    val xj = polygon.getJSONArray(j).getDouble(1)
 
+                    // 다각형의 각 변과 주어진 점 사이의 관계를 확인합니다.
+                    val intersectCondition = (yi < longitude && yj >= longitude) || (yj < longitude && yi >= longitude)
+                    val xIntersection = xi + (longitude - yi) / (yj - yi) * (xj - xi)
 
-
-
-
-
-
-    // 주어진 위치의 "CTPRVN_CD"를 반환하는 함수
-    private fun getCTPRVN_CD(latitude: Double, longitude: Double, sidoData: JSONArray): String? {
-        for (i in 0 until sidoData.length()) {
-            val feature = sidoData.getJSONObject(i)
-            val geometry = feature.getJSONObject("geometry")
-            val coordinates = geometry.getJSONArray("coordinates").getJSONArray(0)
-            if (isLocationInsidePolygon(latitude, longitude, coordinates)) {
-                val properties = feature.getJSONObject("properties")
-                return properties.getString("CTPRVN_CD")
-            }
-        }
-        return null
-    }
-
-    // 주어진 위치가 다각형 내에 있는지 확인하는 함수
-    private fun isLocationInsidePolygon(latitude: Double, longitude: Double, coordinates: JSONArray): Boolean {
-        var isInside = false
-        for (i in 0 until coordinates.length()) {
-            val polygon = coordinates.getJSONArray(i)
-            var j = polygon.length() - 1
-            var intersect = false
-            for (k in 0 until polygon.length()) {
-                val xi = polygon.getJSONArray(k).getDouble(0)
-                val yi = polygon.getJSONArray(k).getDouble(1)
-                val xj = polygon.getJSONArray(j).getDouble(0)
-                val yj = polygon.getJSONArray(j).getDouble(1)
-
-                // 다각형의 각 변과 주어진 점 사이의 관계를 확인합니다.
-                if (yi < longitude && yj >= longitude || yj < longitude && yi >= longitude) {
-                    if (xi + (longitude - yi) / (yj - yi) * (xj - xi) < latitude) {
+                    if (intersectCondition && xIntersection < latitude) {
                         intersect = !intersect
                     }
+                    j = k
                 }
-                j = k
+                isInside = if (intersect) !isInside else isInside
             }
-            isInside = if (intersect) !isInside else isInside
+            return isInside
         }
-        return isInside
     }
-
-
-
 }
