@@ -7,7 +7,6 @@ import net.daum.mf.map.api.MapPOIItem
 import net.daum.mf.map.api.MapPoint
 import net.daum.mf.map.api.MapPolyline
 import net.daum.mf.map.api.MapView
-import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -18,17 +17,17 @@ import java.net.URL
 class FetchDataFromServerTask(private val context: Context, private val mapView: MapView) : AsyncTask<Void, Void, Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>>() {
 
     override fun doInBackground(vararg params: Void?): Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>? {
-        val trafficMarkers = fetchTrafficData()
-        val sidoPolygons = fetchSidoData()
+        val crimeMarkers = fetchCrimeData()
+        val sigPolygons = fetchSigData()
 
-        return Pair(trafficMarkers, sidoPolygons)
+        return Pair(crimeMarkers, sigPolygons)
     }
 
-    private fun fetchTrafficData(): List<MapPOIItem> {
+    private fun fetchCrimeData(): List<MapPOIItem> {
         val markers = mutableListOf<MapPOIItem>()
 
         try {
-            val url = URL("https://cha8041.pythonanywhere.com/senddata/traffic_data")
+            val url = URL("https://cha8041.pythonanywhere.com/senddata/crime_data")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connect()
@@ -43,14 +42,16 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
                 }
                 val jsonObject = JSONObject(response.toString())
 
-                val latitudeArray = jsonObject.getJSONArray("la_crd")
-                val longitudeArray = jsonObject.getJSONArray("lo_crd")
+                val latitudeArray = jsonObject.getJSONArray("latitude")
+                val longitudeArray = jsonObject.getJSONArray("longitude")
+                val murderArray = jsonObject.getJSONArray("MURDER")
 
-                val length = minOf(latitudeArray.length(), longitudeArray.length())
+                val length = minOf(latitudeArray.length(), longitudeArray.length(), murderArray.length())
 
                 for (i in 0 until length) {
                     val latitudeString = latitudeArray.getString(i)
                     val longitudeString = longitudeArray.getString(i)
+                    val crimeType = murderArray.getInt(i)
 
                     val latitude = latitudeString.trim().toDoubleOrNull()
                     val longitude = longitudeString.trim().toDoubleOrNull()
@@ -60,8 +61,39 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
                         marker.itemName = "Marker $i"
                         marker.tag = i
                         marker.mapPoint = MapPoint.mapPointWithGeoCoord(latitude, longitude)
-                        marker.markerType = MapPOIItem.MarkerType.RedPin
                         marker.isShowCalloutBalloonOnTouch = true
+
+                        // Set marker color based on crime type
+                        when (crimeType) {
+                            1 -> {
+                                marker.markerType = MapPOIItem.MarkerType.CustomImage
+                                marker.customImageResourceId = R.drawable.danger1
+                                marker.setCustomImageAnchor(0.01f, 0.01f) // Optional: set anchor point for custom image
+                            }
+                            2 -> {
+                                marker.markerType = MapPOIItem.MarkerType.CustomImage
+                                marker.customImageResourceId = R.drawable.danger2
+                                marker.setCustomImageAnchor(0.01f, 0.01f) // Optional: set anchor point for custom image
+                            }
+                            3 -> {
+                                marker.markerType = MapPOIItem.MarkerType.CustomImage
+                                marker.customImageResourceId = R.drawable.danger3
+                                marker.setCustomImageAnchor(0.01f, 0.01f) // Optional: set anchor point for custom image
+                            }
+                            4 -> {
+                                marker.markerType = MapPOIItem.MarkerType.CustomImage
+                                marker.customImageResourceId = R.drawable.danger4
+                                marker.setCustomImageAnchor(0.01f, 0.01f) // Optional: set anchor point for custom image
+                            }
+                            5 -> {
+                                marker.markerType = MapPOIItem.MarkerType.CustomImage
+                                marker.customImageResourceId = R.drawable.danger5
+                                marker.setCustomImageAnchor(0.01f, 0.01f) // Optional: set anchor point for custom image
+                            }
+                            // You can add more cases if needed
+                            else -> marker.markerType = MapPOIItem.MarkerType.CustomImage
+                        }
+
                         markers.add(marker)
                     }
                 }
@@ -73,11 +105,13 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
         return markers
     }
 
-    private fun fetchSidoData(): List<List<Pair<Double, Double>>> {
+
+
+    private fun fetchSigData(): List<List<Pair<Double, Double>>> {
         val polygons = mutableListOf<List<Pair<Double, Double>>>()
 
         try {
-            val urlPolygon = URL("https://cha8041.pythonanywhere.com/senddata/sido1")
+            val urlPolygon = URL("https://cha8041.pythonanywhere.com/senddata/sig1")
             val connectionPolygon = urlPolygon.openConnection() as HttpURLConnection
             connectionPolygon.requestMethod = "GET"
             connectionPolygon.connect()

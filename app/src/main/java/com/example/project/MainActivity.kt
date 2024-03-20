@@ -1,8 +1,10 @@
 package com.example.project
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -13,14 +15,26 @@ import net.daum.mf.map.api.MapView
 
 class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationUpdateListener: LocationUpdateListener
     private lateinit var mapView: MapView
     private lateinit var locationService: LocationServiceExample
+    private lateinit var crime: Crime
     private lateinit var fetchDataFromServerTask: FetchDataFromServerTask
     private var gpsUse: Boolean? = null
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        val alarmImageView: ImageView = findViewById(R.id.imageButton1)
+
+        alarmImageView.setOnClickListener {
+            // AlarmSetActivity로 이동하는 Intent 생성
+            val intent = Intent(this@MainActivity, Alarmset::class.java)
+            // 액티비티 시작
+            startActivity(intent)
+        }
 
         // FusedLocationProviderClient 초기화
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -30,11 +44,17 @@ class MainActivity : AppCompatActivity() {
         val mapViewContainer: ViewGroup = findViewById(R.id.map_view)
         mapViewContainer.addView(mapView)
 
+
         // FetchDataFromServerTask 초기화
         fetchDataFromServerTask = FetchDataFromServerTask(this, mapView)
 
+        // Murder 클래스 초기화
+        crime = Crime(this)
+
         // 위치 서비스 초기화
         locationService = LocationServiceExample(this)
+        // 위치 서비스 시작
+        locationService.startLocationUpdates()
 
         // 위치 권한 체크 및 요청
         checkLocationPermission()
@@ -42,13 +62,10 @@ class MainActivity : AppCompatActivity() {
         // GPS 체크
         gpsCheck()
 
-        // 위치 서비스 시작
-        locationService.startLocationUpdates()
-
         // 현재 위치 가져오기
         fetchCurrentLocation()
-
-        FetchDataFromServerTask(this, mapView).execute()
+        // 서버로부터 데이터 가져오기
+        fetchDataFromServerTask.execute()
     }
 
     private fun checkLocationPermission() {
@@ -94,9 +111,8 @@ class MainActivity : AppCompatActivity() {
                     val latitude = it.latitude
                     val longitude = it.longitude
 
-                    LocationServiceExample(this)
-                    // FetchDataFromServerTask 실행
-                    FetchDataFromServerTask(this, mapView).execute()
+                    // 위치 서비스 내부의 위치 업데이트 처리 함수 호출
+                    locationService.handleLocationUpdate(location)
                 }
             }
             .addOnFailureListener { e ->
