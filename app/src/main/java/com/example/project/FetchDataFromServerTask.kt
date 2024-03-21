@@ -111,7 +111,7 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
         val polygons = mutableListOf<List<Pair<Double, Double>>>()
 
         try {
-            val urlPolygon = URL("https://cha8041.pythonanywhere.com/senddata/sig1")
+            val urlPolygon = URL("")
             val connectionPolygon = urlPolygon.openConnection() as HttpURLConnection
             connectionPolygon.requestMethod = "GET"
             connectionPolygon.connect()
