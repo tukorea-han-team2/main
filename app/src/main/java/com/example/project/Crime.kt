@@ -34,7 +34,7 @@ class Crime(private val context: Context) {
 
         private fun fetchData(): List<String>? {
             try {
-                val url = URL("https://cha8041.pythonanywhere.com/senddata/crime_data")
+                val url = URL("")
                 val connection = url.openConnection() as HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connect()
