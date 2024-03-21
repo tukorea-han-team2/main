@@ -27,7 +27,7 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
         val markers = mutableListOf<MapPOIItem>()
 
         try {
-            val url = URL("https://cha8041.pythonanywhere.com/senddata/crime_data")
+            val url = URL("")
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "GET"
             connection.connect()
