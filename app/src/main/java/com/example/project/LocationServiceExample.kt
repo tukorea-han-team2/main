@@ -6,6 +6,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.AsyncTask
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import org.json.JSONArray
 import org.json.JSONObject
@@ -13,12 +14,19 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import com.example.project.gs.MatchingLevelManager
+
 
 class LocationServiceExample(private val context: Context) {
 
     private var locationManager: LocationManager? = null
     private lateinit var myLocationListener: MyLocationListener
-    private val crimeInstance = Crime(context)
+    private val crimeInstance = Crime()
+
+    private var previousSggKorNm: String? = null
+
+    private var matchingLevelManager = MatchingLevelManager(4)
+
 
     init {
         // 위치 관리자 초기화
@@ -34,8 +42,8 @@ class LocationServiceExample(private val context: Context) {
         try {
             locationManager?.requestLocationUpdates(
                 LocationManager.GPS_PROVIDER,
-                10000, // 업데이트 간격 (0: 가능한 빠르게)
-                0f, // 업데이트 간격 (미터 단위)
+                100, // 업데이트 간격 (0: 가능한 빠르게)
+                100f, // 업데이트 간격 (미터 단위)
                 myLocationListener
             )
         } catch (e: SecurityException) {
@@ -54,7 +62,6 @@ class LocationServiceExample(private val context: Context) {
         val latitude = location.latitude
         val longitude = location.longitude
 
-        // AsyncTask를 통해 백그라운드에서 네트워크 호출 수행
         FetchDataTask(context, latitude, longitude) {}.execute()
     }
 
@@ -66,6 +73,7 @@ class LocationServiceExample(private val context: Context) {
             handleLocationUpdate(location)
         }
 
+        @Deprecated("Deprecated in Java")
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
             // 위치 공급자의 상태가 변경될 때 호출됩니다.
             // 예를 들어, GPS가 사용 가능해지거나 사용 불가능해질 때 호출됩니다.
@@ -88,58 +96,64 @@ class LocationServiceExample(private val context: Context) {
         private val callback: (List<String>?) -> Unit
     ) : AsyncTask<Void, Void, String?>() {
 
+        @Deprecated("Deprecated in Java")
         override fun doInBackground(vararg params: Void?): String? {
             // 백그라운드에서 네트워크 호출 수행하여 시/도 코드 반환
-            return fetchData()
+            return fetchData(latitude, longitude)
         }
 
+        @Deprecated("Deprecated in Java")
         override fun onPostExecute(result: String?) {
-            // 네트워크 호출 완료 후 UI 업데이트 등을 수행
+            val level = matchingLevelManager.getLevel()
 
-            if (result != null) {
-                crimeInstance.fetchMatchingSGGKorNmAndSIGKorNm(5) { matchingSGGKorNmList ->
+            if (result != null && result != previousSggKorNm) { // 이전 시군구와 현재 시군구 비교
+                previousSggKorNm = result // 이전 시군구 업데이트
+                // 시군구가 변경되었을 때만 토스트 메시지 출력
+
+                crimeInstance.fetchMatchingSGGKorNmAndSIGKorNm(level) { matchingSGGKorNmList ->
                     matchingSGGKorNmList?.let { sggKorNmList ->
                         if (sggKorNmList.contains(result)) {
                             // SIG_KOR_NM가 sggKorNmList에 포함되어 있을 때 토스트 메시지 출력
-                            Toast.makeText(context, "시/군/구 이름: $result", Toast.LENGTH_SHORT)
+                            Toast.makeText(
+                                context,
+                                "$result 는 ${level}단계",
+                                Toast.LENGTH_SHORT
+                            )
                                 .show()
                         }
                     }
                 }
-
             }
         }
+
+
+
         // 네트워크 호출을 수행하는 함수
-        private fun fetchData(): String? {
+        private fun fetchData(latitude: Double, longitude: Double): String? {
             try {
-                val url = URL("https://cha8041.pythonanywhere.com/senddata/sig1")
-                val connection = url.openConnection() as HttpURLConnection
-                connection.requestMethod = "GET"
-                connection.connect()
-                val responseCode = connection.responseCode
-                if (responseCode == HttpURLConnection.HTTP_OK) {
-                    val inputStream = connection.inputStream
-                    val reader = BufferedReader(InputStreamReader(inputStream))
-                    val response = StringBuilder()
-                    var line: String?
-                    while (reader.readLine().also { line = it } != null) {
-                        response.append(line)
-                    }
-                    val jsonObject = JSONObject(response.toString())
-                    val jsonArray = jsonObject.getJSONArray("features")
+                val inputStream = context.resources.openRawResource(R.raw.sig)
+                val reader = BufferedReader(InputStreamReader(inputStream))
+                val response = StringBuilder()
+                var line: String?
 
-                    // 주어진 위치의 위도와 경도를 사용하여 시/도 코드를 결정
-                    for (i in 0 until jsonArray.length()) {
-                        val feature = jsonArray.getJSONObject(i)
-                        val geometry = feature.getJSONObject("geometry")
-                        val coordinates = geometry.getJSONArray("coordinates")
-                        val properties = feature.getJSONObject("properties")
+                while (reader.readLine().also { line = it } != null) {
+                    response.append(line)
+                }
 
-                        // 현재 위치가 다각형 내부에 있는지 확인
-                        if (isLocationInsidePolygon(latitude, longitude, coordinates)) {
-                            return properties.getString("SIG_KOR_NM")
+                val jsonObject = JSONObject(response.toString())
+                val jsonArray = jsonObject.getJSONArray("features")
 
-                        }
+                // 주어진 위치의 위도와 경도를 사용하여 시/도 코드를 결정
+                for (i in 0 until jsonArray.length()) {
+                    val feature = jsonArray.getJSONObject(i)
+                    val geometry = feature.getJSONObject("geometry")
+                    val coordinates = geometry.getJSONArray("coordinates")
+                    val properties = feature.getJSONObject("properties")
+
+                    // 현재 위치가 다각형 내부에 있는지 확인
+                    if (isLocationInsidePolygon(latitude, longitude, coordinates)) {
+                        return properties.getString("SIG_KOR_NM")
+
                     }
                 }
             } catch (e: Exception) {
@@ -178,4 +192,5 @@ class LocationServiceExample(private val context: Context) {
             return isInside
         }
     }
+
 }

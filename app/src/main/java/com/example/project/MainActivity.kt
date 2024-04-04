@@ -20,6 +20,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var locationService: LocationServiceExample
     private lateinit var crime: Crime
     private lateinit var fetchDataFromServerTask: FetchDataFromServerTask
+    private lateinit var mapController: MapController
     private var gpsUse: Boolean? = null
 
 
@@ -39,33 +40,40 @@ class MainActivity : AppCompatActivity() {
         // FusedLocationProviderClient 초기화
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // MapView 초기화
-        mapView = MapView(this)
-        val mapViewContainer: ViewGroup = findViewById(R.id.map_view)
-        mapViewContainer.addView(mapView)
-
-
         // FetchDataFromServerTask 초기화
-        fetchDataFromServerTask = FetchDataFromServerTask(this, mapView)
+        // fetchDataFromServerTask = FetchDataFromServerTask(this, mapView)
 
         // Murder 클래스 초기화
-        crime = Crime(this)
+        crime = Crime()
 
         // 위치 서비스 초기화
         locationService = LocationServiceExample(this)
+
         // 위치 서비스 시작
         locationService.startLocationUpdates()
 
         // 위치 권한 체크 및 요청
         checkLocationPermission()
 
+
+
+        // 서버로부터 데이터 가져오기
+        // fetchDataFromServerTask.execute()
+
+        // MapView 초기화
+        mapView = MapView(this)
+        val mapViewContainer: ViewGroup = findViewById(R.id.map_view)
+        mapViewContainer.addView(mapView)
+
         // GPS 체크
         gpsCheck()
-
         // 현재 위치 가져오기
         fetchCurrentLocation()
-        // 서버로부터 데이터 가져오기
-        fetchDataFromServerTask.execute()
+
+        val mapDataFetcher = MapDataFetcher(this)
+        val crimeDataFetcher = CrimeDataFetcher()
+        mapController = MapController(mapView, mapDataFetcher, crimeDataFetcher)
+        mapController.initialize()
     }
 
     private fun checkLocationPermission() {

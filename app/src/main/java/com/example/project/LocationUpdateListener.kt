@@ -9,13 +9,14 @@ class LocationUpdateListener(private val context: Context) : LocationListener {
 
     private val Alarmset = Alarmset()
     private val locationServiceExample = LocationServiceExample(context)
-    private val crime = Crime(context)
+    private val crime = Crime()
 
     override fun onLocationChanged(location: Location) {
         // 위치가 변경될 때 호출합니다.
         locationServiceExample.handleLocationUpdate(location)
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {
         // 위치 공급자의 상태가 변경될 때 호출됩니다.
     }

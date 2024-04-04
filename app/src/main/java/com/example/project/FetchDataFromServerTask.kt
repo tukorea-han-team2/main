@@ -16,6 +16,7 @@ import java.net.URL
 
 class FetchDataFromServerTask(private val context: Context, private val mapView: MapView) : AsyncTask<Void, Void, Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>>() {
 
+    @Deprecated("Deprecated in Java")
     override fun doInBackground(vararg params: Void?): Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>? {
         val crimeMarkers = fetchCrimeData()
         val sigPolygons = fetchSigData()
@@ -106,43 +107,35 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
     }
 
 
-
     private fun fetchSigData(): List<List<Pair<Double, Double>>> {
         val polygons = mutableListOf<List<Pair<Double, Double>>>()
 
         try {
-            val urlPolygon = URL("https://cha8041.pythonanywhere.com/senddata/sig1")
-            val connectionPolygon = urlPolygon.openConnection() as HttpURLConnection
-            connectionPolygon.requestMethod = "GET"
-            connectionPolygon.connect()
+            val inputStream = context.resources.openRawResource(R.raw.sig)
+            val reader = BufferedReader(InputStreamReader(inputStream))
+            val response = StringBuilder()
+            var line: String?
 
-            val responseCodePolygon = connectionPolygon.responseCode
-            if (responseCodePolygon == HttpURLConnection.HTTP_OK) {
-                val inputStreamPolygon = connectionPolygon.inputStream
-                val readerPolygon = BufferedReader(InputStreamReader(inputStreamPolygon))
-                val responsePolygon = StringBuilder()
-                var linePolygon: String?
-                while (readerPolygon.readLine().also { linePolygon = it } != null) {
-                    responsePolygon.append(linePolygon)
+            while (reader.readLine().also { line = it } != null) {
+                response.append(line)
+            }
+
+            val jsonObject = JSONObject(response.toString())
+            val featuresArray = jsonObject.getJSONArray("features")
+
+            for (i in 0 until featuresArray.length()) {
+                val featureObject = featuresArray.getJSONObject(i)
+                val geometryObject = featureObject.getJSONObject("geometry")
+                val coordinatesArray = geometryObject.getJSONArray("coordinates").getJSONArray(0)
+
+                val points = mutableListOf<Pair<Double, Double>>()
+                for (j in 0 until coordinatesArray.length()) {
+                    val coordinateArray = coordinatesArray.getJSONArray(j)
+                    val latitude = coordinateArray.getDouble(1)
+                    val longitude = coordinateArray.getDouble(0)
+                    points.add(Pair(latitude, longitude))
                 }
-
-                val jsonObjectPolygon = JSONObject(responsePolygon.toString())
-                val featuresArray = jsonObjectPolygon.getJSONArray("features")
-
-                for (i in 0 until featuresArray.length()) {
-                    val featureObject = featuresArray.getJSONObject(i)
-                    val geometryObject = featureObject.getJSONObject("geometry")
-                    val coordinatesArray = geometryObject.getJSONArray("coordinates").getJSONArray(0)
-
-                    val points = mutableListOf<Pair<Double, Double>>()
-                    for (j in 0 until coordinatesArray.length()) {
-                        val coordinateArray = coordinatesArray.getJSONArray(j)
-                        val latitude = coordinateArray.getDouble(1)
-                        val longitude = coordinateArray.getDouble(0)
-                        points.add(Pair(latitude, longitude))
-                    }
-                    polygons.add(points)
-                }
+                polygons.add(points)
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -151,7 +144,11 @@ class FetchDataFromServerTask(private val context: Context, private val mapView:
         return polygons
     }
 
-    override fun onPostExecute(result: Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>?) {
+
+
+
+    @Deprecated("Deprecated in Java")
+        override fun onPostExecute(result: Pair<List<MapPOIItem>, List<List<Pair<Double, Double>>>>?) {
         super.onPostExecute(result)
         result?.let { Pair ->
             val markers = Pair.first
