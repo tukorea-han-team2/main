@@ -1,9 +1,11 @@
 package com.example.project
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -15,15 +17,16 @@ import net.daum.mf.map.api.MapView
 
 class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
-    private lateinit var locationUpdateListener: LocationUpdateListener
     private lateinit var mapView: MapView
     private lateinit var locationService: LocationServiceExample
     private lateinit var crime: Crime
     private lateinit var fetchDataFromServerTask: FetchDataFromServerTask
     private lateinit var mapController: MapController
+    private lateinit var mapControllerAccident: MapControllerAccident
     private var gpsUse: Boolean? = null
 
 
+    @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -42,9 +45,6 @@ class MainActivity : AppCompatActivity() {
 
         // FetchDataFromServerTask 초기화
         // fetchDataFromServerTask = FetchDataFromServerTask(this, mapView)
-
-        // Murder 클래스 초기화
-        crime = Crime()
 
         // 위치 서비스 초기화
         locationService = LocationServiceExample(this)
@@ -70,10 +70,39 @@ class MainActivity : AppCompatActivity() {
         // 현재 위치 가져오기
         fetchCurrentLocation()
 
+        val crimeButton: Button = findViewById(R.id.crime_button)
+        val accidentButton: Button = findViewById(R.id.accident_button)
+
+
+        crimeButton.setOnClickListener {
+            clearPolygons()
+            showCrimeMarkersAndPolygons()
+
+        }
+
+        accidentButton.setOnClickListener {
+            clearPolygons()
+            showAccidentPolygons()
+
+        }
+
+    }
+
+    private fun showCrimeMarkersAndPolygons(){
         val mapDataFetcher = MapDataFetcher(this)
-        val crimeDataFetcher = CrimeDataFetcher()
-        mapController = MapController(mapView, mapDataFetcher, crimeDataFetcher)
+        val crimeDataFetcher = CrimeDataFetcher(this)
+        mapController = MapController(mapView, crimeDataFetcher)
         mapController.initialize()
+    }
+
+    private fun showAccidentPolygons(){
+        val accidentDataFetcher = AccidentDataFetcher(this)
+        mapControllerAccident = MapControllerAccident(mapView, accidentDataFetcher)
+        mapControllerAccident.initialize()
+    }
+
+    private fun clearPolygons() {
+        mapView.removeAllPolylines() // 기존 다각형 삭제
     }
 
     private fun checkLocationPermission() {

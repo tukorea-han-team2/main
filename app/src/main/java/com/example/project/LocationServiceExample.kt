@@ -6,22 +6,20 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.AsyncTask
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
+import com.example.project.gs.MatchingLevelManager
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
-import java.net.HttpURLConnection
-import java.net.URL
-import com.example.project.gs.MatchingLevelManager
 
 
 class LocationServiceExample(private val context: Context) {
 
+
     private var locationManager: LocationManager? = null
     private lateinit var myLocationListener: MyLocationListener
-    private val crimeInstance = Crime()
+    private val crimeInstance = Crime(context)
 
     private var previousSggKorNm: String? = null
 
