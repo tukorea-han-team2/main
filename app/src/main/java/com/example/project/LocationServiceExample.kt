@@ -114,7 +114,7 @@ class LocationServiceExample(private val context: Context) {
                             // SIG_KOR_NM가 sggKorNmList에 포함되어 있을 때 토스트 메시지 출력
                             Toast.makeText(
                                 context,
-                                "$result 는 ${level}단계",
+                                "$result 는 ${level}단계 이상으로 위험지역입니다.",
                                 Toast.LENGTH_SHORT
                             )
                                 .show()

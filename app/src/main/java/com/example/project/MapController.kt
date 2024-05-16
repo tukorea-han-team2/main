@@ -27,7 +27,6 @@ class MapController(
         CoroutineScope(Dispatchers.Main + handler)
     }
 
-
     private var currentLocation: MapPoint? = null
 
     init {
@@ -101,10 +100,14 @@ class MapController(
 
         job = scope.launch {
             try {
-                if (currentLocation != null) {
-                    val crimeData = crimeDataFetcher.fetchCrimeData( centerLatitude, centerLongitude, 5.0)
-                    addMarkersToMap(crimeData)
+                val crimeData = if(currentZoomLevel > 7){
+                    crimeDataFetcher.fetchCrimeSidoData(kakaoMap)
+                } else if (5 < currentZoomLevel) {
+                    crimeDataFetcher.fetchCrimeSigData(kakaoMap)
+                } else {
+                    crimeDataFetcher.fetchCrimeData(centerLatitude, centerLongitude, 5.0)
                 }
+                addMarkersToMap(crimeData)
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -123,7 +126,9 @@ class MapController(
     }
 
     fun initialize() {
-        mapView.setZoomLevel(3, true)
+        mapView.setZoomLevel(15, true)
+
+        this.kakaoMap = mapView
     }
 
     override fun onCurrentLocationUpdateFailed(p0: MapView?) {

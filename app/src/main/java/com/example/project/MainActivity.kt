@@ -1,18 +1,18 @@
 package com.example.project
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.ImageView
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.*
+import kotlinx.coroutines.*
 import net.daum.mf.map.api.MapView
 
 class MainActivity : AppCompatActivity() {
@@ -24,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mapController: MapController
     private lateinit var mapControllerAccident: MapControllerAccident
     private var gpsUse: Boolean? = null
+    private val locationRequest: LocationRequest = LocationRequest.create()
 
 
     @SuppressLint("MissingInflatedId")
@@ -31,14 +32,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val alarmImageView: ImageView = findViewById(R.id.imageButton1)
-
-        alarmImageView.setOnClickListener {
-            // AlarmSetActivity로 이동하는 Intent 생성
-            val intent = Intent(this@MainActivity, Alarmset::class.java)
-            // 액티비티 시작
-            startActivity(intent)
-        }
 
         // FusedLocationProviderClient 초기화
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
@@ -56,7 +49,6 @@ class MainActivity : AppCompatActivity() {
         checkLocationPermission()
 
 
-
         // 서버로부터 데이터 가져오기
         // fetchDataFromServerTask.execute()
 
@@ -67,26 +59,63 @@ class MainActivity : AppCompatActivity() {
 
         // GPS 체크
         gpsCheck()
-        // 현재 위치 가져오기
-        fetchCurrentLocation()
 
         val crimeButton: Button = findViewById(R.id.crime_button)
         val accidentButton: Button = findViewById(R.id.accident_button)
-
+        val zoomInButton: ImageButton = findViewById(R.id.zoomInButton)
+        val zoomOutButton: ImageButton = findViewById(R.id.zoomOutButton)
 
         crimeButton.setOnClickListener {
-            clearPolygons()
+            stopLocationUpdates()
+
             showCrimeMarkersAndPolygons()
 
         }
 
         accidentButton.setOnClickListener {
-            clearPolygons()
-            showAccidentPolygons()
+            removeAllMarkersFromMap()
+
+
+            // MapControllerAccident 클래스 초기화
+            mapControllerAccident = MapControllerAccident(this)
+
+            // 현재 위치를 가져와서 해당 위치의 도로 정보를 가져옵니다.
+            fetchCurrentLocationForAccident()
 
         }
 
+
+        zoomInButton.setOnClickListener{
+            onZoomInButtonClick(mapView)
+        }
+
+        zoomOutButton.setOnClickListener{
+            onZoomOutButtonClick(mapView)
+        }
+
+        // 위치 업데이트 주기 설정
+        locationRequest.interval = 20000 // 20초마다 업데이트
+        locationRequest.fastestInterval = 10000 // 최소 10초 간격으로 업데이트
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
+
+    private fun removeAllMarkersFromMap() {
+        mapView.removeAllPOIItems()
+    }
+
+    fun onZoomInButtonClick(mapView: MapView) {
+        // 맵의 줌 레벨을 확대합니다.
+        val currentZoomLevel = mapView.zoomLevel
+        mapView.setZoomLevel(currentZoomLevel + 1, true)
+    }
+
+    fun onZoomOutButtonClick(mapView: MapView) {
+        // 맵의 줌 레벨을 축소합니다.
+        val currentZoomLevel = mapView.zoomLevel
+        mapView.setZoomLevel(currentZoomLevel - 1, true)
+    }
+
+
 
     private fun showCrimeMarkersAndPolygons(){
         val mapDataFetcher = MapDataFetcher(this)
@@ -95,14 +124,37 @@ class MainActivity : AppCompatActivity() {
         mapController.initialize()
     }
 
-    private fun showAccidentPolygons(){
-        val accidentDataFetcher = AccidentDataFetcher(this)
-        mapControllerAccident = MapControllerAccident(mapView, accidentDataFetcher)
-        mapControllerAccident.initialize()
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            val location: Location? = locationResult.lastLocation
+            if (location != null) {
+                val latitude = location.latitude
+                val longitude = location.longitude
+
+                // 위치 서비스 내부의 위치 업데이트 처리 함수 호출
+                locationService.handleLocationUpdate(location)
+
+                // 사고 정보 업데이트 요청
+                mapControllerAccident.getRoadInformation(latitude, longitude)
+            }
+        }
+    }
+    private fun fetchCurrentLocationForAccident() {
+        // 위치 권한이 있는지 확인
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+
+        // 위치 업데이트 요청
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
     }
 
     private fun clearPolygons() {
         mapView.removeAllPolylines() // 기존 다각형 삭제
+    }
+
+    private fun clearMarkers() {
+        mapView.removeAllPOIItems()
     }
 
     private fun checkLocationPermission() {
@@ -134,37 +186,12 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-    private fun fetchCurrentLocation() {
-        // 위치 권한이 있는지 확인
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-
-        // 현재 위치 가져오기
-        fusedLocationClient.lastLocation
-            .addOnSuccessListener { location ->
-                // 위치를 성공적으로 가져왔을 때 실행되는 콜백
-                location?.let {
-                    val latitude = it.latitude
-                    val longitude = it.longitude
-
-                    // 위치 서비스 내부의 위치 업데이트 처리 함수 호출
-                    locationService.handleLocationUpdate(location)
-                }
-            }
-            .addOnFailureListener { e ->
-                // 위치를 가져오지 못했을 때 실행되는 콜백
-                e.printStackTrace()
-            }
-    }
-
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_LOCATION_PERMISSION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // 위치 권한이 허용되면 현재 위치 가져오기
-                fetchCurrentLocation()
+                fetchCurrentLocationForAccident()
             } else {
                 // 위치 권한이 거부되면 메시지 표시
                 Toast.makeText(this, "위치 권한이 거부되어 현재 위치를 가져올 수 없습니다.", Toast.LENGTH_SHORT).show()
@@ -175,4 +202,11 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val REQUEST_LOCATION_PERMISSION = 1
     }
+
+
+
+    private fun stopLocationUpdates() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+    }
+
 }

@@ -1,136 +1,45 @@
 package com.example.project
 
 
-import android.graphics.Point
-import android.os.Handler
-import android.os.Looper
-import kotlinx.coroutines.*
-import net.daum.mf.map.api.*
-import net.daum.mf.map.api.MapView.CurrentLocationEventListener
-import net.daum.mf.map.api.MapView.MapViewEventListener
+import android.app.AlertDialog
+import android.content.Context
 
-class MapControllerAccident(
-    private val mapView: MapView,
-    private val accidentDataFetcher: AccidentDataFetcher
-) : CurrentLocationEventListener, MapViewEventListener {
+class MapControllerAccident(private val context: Context) {
 
-    private lateinit var kakaoMap: MapView
+    private val accidentDataFetcher = AccidentDataFetcher(context)
 
-    private var currentZoomLevel: Int = 0
-    private var job: Job? = null
-    private val handler = Handler(Looper.getMainLooper())
-    private val scope = CoroutineScope(Dispatchers.Main)
+    fun getRoadInformation(latitude: Double, longitude: Double) {
+        accidentDataFetcher.fetchRoadInformation(latitude, longitude) { roadData ->
+            roadData?.let { data ->
+                val roadName = data.road
+                val epdo = data.epdo
+                val dangerous = data.dangerous
 
-    init {
-        mapView.setMapViewEventListener(this)
-        mapView.setCurrentLocationEventListener(this)
-    }
-
-    override fun onMapViewInitialized(mapView: MapView?) {
-        mapView?.let {
-            this.kakaoMap = it
-        }
-    }
-
-    override fun onMapViewCenterPointMoved(p0: MapView?, p1: MapPoint?) {
-    }
-
-    override fun onMapViewZoomLevelChanged(mapView: MapView?, level: Int) {
-        currentZoomLevel = level
-        loadMapDataAccordingToZoomLevel(currentZoomLevel)
-    }
-
-    override fun onMapViewSingleTapped(p0: MapView?, p1: MapPoint?) {
-    }
-
-    override fun onMapViewDoubleTapped(p0: MapView?, p1: MapPoint?) {
-    }
-
-    override fun onMapViewLongPressed(p0: MapView?, p1: MapPoint?) {
-    }
-
-    override fun onMapViewDragStarted(p0: MapView?, p1: MapPoint?) {
-    }
-
-    override fun onMapViewDragEnded(p0: MapView?, p1: MapPoint?) {
-    }
-
-    override fun onMapViewMoveFinished(p0: MapView?, p1: MapPoint?) {
-    }
-
-    override fun onCurrentLocationUpdate(
-        mapView: MapView?,
-        currentLocation: MapPoint?,
-        accuracyInMeters: Float
-    ) {
-    }
-
-    override fun onCurrentLocationDeviceHeadingUpdate(p0: MapView, p1: Float) {
-        // Empty implementation
-    }
-
-    override fun onCurrentLocationUpdateFailed(p0: MapView?) {
-    }
-
-    override fun onCurrentLocationUpdateCancelled(p0: MapView?) {
-    }
-
-
-    private fun loadMapDataAccordingToZoomLevel(currentZoomLevel: Int) {
-        // 취소 요청을 핸들링하기 위해 기존 작업을 취소
-        job?.cancel()
-
-        job = scope.launch {
-            try {
-
-                val accidentDataDataDeferred = async(Dispatchers.IO) {
-                    accidentDataFetcher.fetchAccidentData()
+                // 팝업을 표시할 조건을 설정합니다.
+                if (dangerous >= 1) {
+                    showDangerousPopup(roadName, epdo, dangerous)
+                } else {
+                    // 팝업을 표시하지 않을 경우에 대한 로직을 여기에 추가할 수 있습니다.
                 }
-
-                val accidentData = accidentDataDataDeferred.await() ?: return@launch
-
-
-                clearMarkers()
-                drawPolygons(accidentData)
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } ?: run {
+                // 도로 정보를 가져오는 데 실패한 경우, 에러 처리를 수행합니다.
+                showError("Failed to fetch road information")
             }
         }
     }
 
-
-
-
-    private fun drawPolygons(polygons: List<List<Pair<Double, Double>>>) {
-        clearPolygons()
-
-        // 새로운 다각형 그리기
-        polygons.forEach { points ->
-            val polyline = MapPolyline()
-            points.forEach { (latitude, longitude) ->
-                polyline.addPoint(MapPoint.mapPointWithGeoCoord(latitude, longitude))
-            }
-            mapView.addPolyline(polyline) // 지도에 다각형 추가
+    fun showDangerousPopup(roadName: String, epdo: Double, dangerous: Int) {
+        val builder = AlertDialog.Builder(context)
+        builder.setTitle("위험 도로 안내")
+        builder.setMessage("현재 위치 근처에 $roadName 도로의 위험도가 높습니다. 위험도: $dangerous")
+        builder.setPositiveButton("확인") { dialog, _ ->
+            dialog.dismiss()
         }
+        val dialog = builder.create()
+        dialog.show()
     }
 
-    private fun clearPolygons() {
-        mapView.removeAllPolylines() // 기존 다각형 삭제
-    }
-
-    private fun clearMarkers() {
-        // 지도에 추가된 모든 마커들을 지웁니다.
-        mapView.removeAllPOIItems()
-    }
-
-    private fun addMarkersToMap(markers: List<MapPOIItem>) {
-        markers.forEach { marker ->
-            mapView.addPOIItem(marker)
-        }
-    }
-
-    fun initialize() {
-        // 초기화 작업 수행
-        mapView.setZoomLevel(3, true)
+    fun showError(message: String) {
+        // 에러를 보여주는 UI 처리를 수행하는 코드를 작성합니다.
     }
 }

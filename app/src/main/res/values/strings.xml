@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">project</string>
+    <string name="zoom_in_description">Zoom In</string>
+    <string name="zoom_out_description">Zoom Out</string>
 </resources>
