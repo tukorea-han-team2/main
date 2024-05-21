@@ -1,6 +1,7 @@
 package com.example.project
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -23,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fetchDataFromServerTask: FetchDataFromServerTask
     private lateinit var mapController: MapController
     private lateinit var mapControllerAccident: MapControllerAccident
+    private lateinit var alarmSet: AlarmSet
     private var gpsUse: Boolean? = null
     private val locationRequest: LocationRequest = LocationRequest.create()
 
@@ -41,6 +43,8 @@ class MainActivity : AppCompatActivity() {
 
         // 위치 서비스 초기화
         locationService = LocationServiceExample(this)
+
+        alarmSet = AlarmSet(this, locationService)
 
         // 위치 서비스 시작
         locationService.startLocationUpdates()
@@ -65,17 +69,15 @@ class MainActivity : AppCompatActivity() {
         val zoomInButton: ImageButton = findViewById(R.id.zoomInButton)
         val zoomOutButton: ImageButton = findViewById(R.id.zoomOutButton)
 
+
         crimeButton.setOnClickListener {
             stopLocationUpdates()
 
             showCrimeMarkersAndPolygons()
-
         }
 
         accidentButton.setOnClickListener {
-            removeAllMarkersFromMap()
-
-
+            clearMarkers()
             // MapControllerAccident 클래스 초기화
             mapControllerAccident = MapControllerAccident(this)
 
@@ -93,15 +95,19 @@ class MainActivity : AppCompatActivity() {
             onZoomOutButtonClick(mapView)
         }
 
+        // 추가된 부분: Alarm 버튼 클릭 이벤트 처리
+        val alarmButton: ImageButton = findViewById(R.id.alarmButton)
+        alarmButton.setOnClickListener {
+            val intent = Intent(this, AlarmSetActivity::class.java)
+            startActivity(intent)
+        }
+
         // 위치 업데이트 주기 설정
         locationRequest.interval = 20000 // 20초마다 업데이트
         locationRequest.fastestInterval = 10000 // 최소 10초 간격으로 업데이트
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
     }
 
-    private fun removeAllMarkersFromMap() {
-        mapView.removeAllPOIItems()
-    }
 
     fun onZoomInButtonClick(mapView: MapView) {
         // 맵의 줌 레벨을 확대합니다.
@@ -140,6 +146,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
     private fun fetchCurrentLocationForAccident() {
+
         // 위치 권한이 있는지 확인
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return

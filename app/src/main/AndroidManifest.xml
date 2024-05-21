@@ -34,11 +34,11 @@
        android:name=".JoinActivity">
     </activity>
 
-    <activity
-        android:name=".Alarmset">
-    </activity>
+        <activity
+            android:name=".AlarmSetActivity">
+        </activity>
 
-    <meta-data
+        <meta-data
         android:name="com.kakao.sdk.AppKey"
         android:value="c5d785b57e0418b7b6adba82a298d5f7"/>
 

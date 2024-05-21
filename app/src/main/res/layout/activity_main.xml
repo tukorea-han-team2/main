@@ -6,6 +6,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
+
     <RelativeLayout
         android:id="@+id/map_view"
         android:layout_width="match_parent"
@@ -32,9 +33,26 @@
             android:text="Crime" />
 
 
-
-
     </RelativeLayout>
+
+    <ImageButton
+        android:id="@+id/alarmButton"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginStart="30dp"
+        android:layout_marginTop="30dp"
+        android:layout_marginEnd="331dp"
+        android:layout_marginBottom="651dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/alarm_description"
+        android:padding="0dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/alarm"
+        tools:ignore="OnClick" />
 
     <ImageButton
         android:id="@+id/zoomOutButton"
@@ -74,5 +92,6 @@
         android:scaleType="fitCenter"
         android:src="@drawable/zoom_in"
         tools:ignore="OnClick" />
+
 
 </RelativeLayout>
