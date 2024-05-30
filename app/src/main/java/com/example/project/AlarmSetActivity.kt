@@ -16,7 +16,7 @@ class AlarmSetActivity : AppCompatActivity() {
         locationService = LocationServiceExample(this)
         alarmSet = AlarmSet(this, locationService)
 
-        // 추가된 부분: 알림 기준 레벨 버튼 초기화
+        // 알림 기준 레벨 버튼 초기화
         val button1: Button = findViewById(R.id.btnFetchCrimeData1)
         val button2: Button = findViewById(R.id.btnFetchCrimeData2)
         val button3: Button = findViewById(R.id.btnFetchCrimeData3)

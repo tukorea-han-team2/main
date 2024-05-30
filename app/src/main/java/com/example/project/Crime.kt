@@ -1,5 +1,6 @@
 package com.example.project
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.AsyncTask
 import org.json.JSONObject
@@ -18,7 +19,7 @@ class Crime(private val context: Context) {
 
     companion object {
         private class FetchDataTask(
-            private val context: Context,
+            @SuppressLint("StaticFieldLeak") private val context: Context,
             private var murderCountThreshold: Int,
             private val callback: (List<String>?) -> Unit
         ) : AsyncTask<Void, Void, List<String>?>() {

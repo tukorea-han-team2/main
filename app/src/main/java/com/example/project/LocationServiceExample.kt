@@ -1,45 +1,39 @@
 package com.example.project
 
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.AsyncTask
 import android.os.Bundle
-import android.widget.Toast
-import com.example.project.gs.MatchingLevelManager
+import androidx.appcompat.app.AlertDialog
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-
-
-class LocationServiceExample(private val context: Context) {
+class LocationServiceExample(private val activity: Activity) {
 
     private var locationManager: LocationManager? = null
     private var myLocationListener: MyLocationListener? = null
-    private val crimeInstance = Crime(context)
     private var previousSggKorNm: String? = null
-    private var matchingLevelManager = MatchingLevelManager(4)
 
     init {
         // 위치 관리자 초기화
-        locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
+        locationManager = activity.getSystemService(Context.LOCATION_SERVICE) as LocationManager?
     }
 
-    // 매칭 레벨을 저장하기 위한 변수
-    private var selectedLevel = 4
+    private var selectedLevel: Int = 4
 
-    // 선택된 매칭 레벨을 설정하는 함수
-    fun setSelectedLevel(level: Int) {
-        selectedLevel = level
-    }
-
-    // 현재 선택된 매칭 레벨을 가져오는 함수
     fun getSelectedLevel(): Int {
         return selectedLevel
+    }
+
+    fun setSelectedLevel(level: Int) {
+        selectedLevel = level
     }
 
     fun startLocationUpdates() {
@@ -67,35 +61,68 @@ class LocationServiceExample(private val context: Context) {
     }
 
     fun handleLocationUpdate(location: Location) {
-        // 위치가 변경될 때 호출됩니다.
-        // 새로운 위치 정보를 처리하는 코드를 여기에 추가하세요.
         val latitude = location.latitude
         val longitude = location.longitude
 
-        FetchDataTask(context, latitude, longitude) { result ->
+        val currentSelectedLevel = getSelectedLevel()
+
+        FetchDataTask(activity, latitude, longitude) { result ->
             result?.let { newSggKorNm ->
-                if (newSggKorNm != previousSggKorNm) {
-                    previousSggKorNm = newSggKorNm
-                    displayToast(newSggKorNm)
-                }
+                displayPopupIfLocationChanged(newSggKorNm, currentSelectedLevel)
             }
         }.execute()
     }
 
-    private fun displayToast(newSggKorNm: String) {
-        val toastMessage = "$newSggKorNm 는 ${getSelectedLevel()}단계 이상으로 위험지역입니다."
-        Toast.makeText(context, toastMessage, Toast.LENGTH_SHORT).show()
+    fun displayPopupIfLocationChanged(newSggKorNm: String?, selectedLevel: Int) {
+        if (newSggKorNm != previousSggKorNm) {
+            // 이전 위치 정보와 현재 위치 정보가 다른 경우에만 새로운 팝업 창 표시
+            Crime(activity).fetchMatchingSGGKorNmAndSIGKorNm(selectedLevel) { sggKorNmList ->
+                sggKorNmList?.let { list ->
+                    if (list.contains(newSggKorNm)) {
+                        // MURDER 값이 selectedLevel 이상인 경우에만 팝업 창 표시
+                        displayPopupDialog(newSggKorNm as String, selectedLevel)
+                    }
+                }
+            }
+
+            // 이전 위치 정보 업데이트
+            previousSggKorNm = newSggKorNm
+        }
     }
+
+    fun displayPopupDialog(newSggKorNm: String, selectedLevel: Int) {
+        // Activity가 유효한지 확인
+        if (activity.isFinishing || activity.isDestroyed) {
+            return
+        }
+
+        val message = "$newSggKorNm 는 $selectedLevel 단계 이상으로 위험지역입니다."
+
+        // AlertDialog 생성
+        val builder = AlertDialog.Builder(activity)
+        builder.setMessage(message)
+            .setPositiveButton("확인") { dialog, _ ->
+                dialog.dismiss() // 확인 버튼을 누르면 팝업 창이 닫힘
+            }
+            .create()
+            .show()
+    }
+
 
     private inner class MyLocationListener : LocationListener {
         override fun onLocationChanged(location: Location) {
-            handleLocationUpdate(location)
+            handleLocationUpdate(location) // 이게 있어야 위치업데이트 시작
         }
+
+        @Deprecated("Deprecated in Java")
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+
         override fun onProviderEnabled(provider: String) {}
+
         override fun onProviderDisabled(provider: String) {}
     }
 
+    @SuppressLint("StaticFieldLeak")
     private inner class FetchDataTask(
         private val context: Context,
         private val latitude: Double,
@@ -103,10 +130,12 @@ class LocationServiceExample(private val context: Context) {
         private val callback: (String?) -> Unit
     ) : AsyncTask<Void, Void, String?>() {
 
+        @Deprecated("Deprecated in Java")
         override fun doInBackground(vararg params: Void?): String? {
             return fetchData(latitude, longitude)
         }
 
+        @Deprecated("Deprecated in Java", ReplaceWith("result?.let { callback(it) }"))
         override fun onPostExecute(result: String?) {
             result?.let { callback(it) }
         }

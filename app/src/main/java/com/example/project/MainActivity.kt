@@ -1,6 +1,7 @@
 package com.example.project
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
@@ -17,44 +18,49 @@ import kotlinx.coroutines.*
 import net.daum.mf.map.api.MapView
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var locationServiceExample: LocationServiceExample
+
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var mapView: MapView
-    private lateinit var locationService: LocationServiceExample
     private lateinit var crime: Crime
-    private lateinit var fetchDataFromServerTask: FetchDataFromServerTask
     private lateinit var mapController: MapController
     private lateinit var mapControllerAccident: MapControllerAccident
     private lateinit var alarmSet: AlarmSet
     private var gpsUse: Boolean? = null
     private val locationRequest: LocationRequest = LocationRequest.create()
-
+    private var selectedLevel: Int = 4 // 선택된 위험도 레벨 변수 추가 및 초기화
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // 사용자가 이전에 선택한 위험도 불러오기
+        val sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
+        selectedLevel = sharedPreferences.getInt("selectedLevel", 4) // 기본값은 4로 설정
+
+        // 추가된 부분: MainActivity로부터 전달된 선택된 레벨 가져오기
+        val selectedLevelFromAlarmSet = intent.getIntExtra("SELECTED_LEVEL", -1)
+        if (selectedLevelFromAlarmSet != -1) {
+            selectedLevel = selectedLevelFromAlarmSet
+            // Save the new selected level to SharedPreferences
+            sharedPreferences.edit().putInt("selectedLevel", selectedLevel).apply()
+        }
 
         // FusedLocationProviderClient 초기화
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // FetchDataFromServerTask 초기화
-        // fetchDataFromServerTask = FetchDataFromServerTask(this, mapView)
-
         // 위치 서비스 초기화
-        locationService = LocationServiceExample(this)
-
-        alarmSet = AlarmSet(this, locationService)
+        locationServiceExample = LocationServiceExample(this)
+        locationServiceExample.setSelectedLevel(selectedLevel)
+        crime = Crime(this)
+        alarmSet = AlarmSet(this, locationServiceExample)
 
         // 위치 서비스 시작
-        locationService.startLocationUpdates()
+        locationServiceExample.startLocationUpdates()
 
         // 위치 권한 체크 및 요청
         checkLocationPermission()
-
-
-        // 서버로부터 데이터 가져오기
-        // fetchDataFromServerTask.execute()
 
         // MapView 초기화
         mapView = MapView(this)
@@ -69,10 +75,8 @@ class MainActivity : AppCompatActivity() {
         val zoomInButton: ImageButton = findViewById(R.id.zoomInButton)
         val zoomOutButton: ImageButton = findViewById(R.id.zoomOutButton)
 
-
         crimeButton.setOnClickListener {
             stopLocationUpdates()
-
             showCrimeMarkersAndPolygons()
         }
 
@@ -80,18 +84,15 @@ class MainActivity : AppCompatActivity() {
             clearMarkers()
             // MapControllerAccident 클래스 초기화
             mapControllerAccident = MapControllerAccident(this)
-
             // 현재 위치를 가져와서 해당 위치의 도로 정보를 가져옵니다.
             fetchCurrentLocationForAccident()
-
         }
 
-
-        zoomInButton.setOnClickListener{
+        zoomInButton.setOnClickListener {
             onZoomInButtonClick(mapView)
         }
 
-        zoomOutButton.setOnClickListener{
+        zoomOutButton.setOnClickListener {
             onZoomOutButtonClick(mapView)
         }
 
@@ -138,7 +139,7 @@ class MainActivity : AppCompatActivity() {
                 val longitude = location.longitude
 
                 // 위치 서비스 내부의 위치 업데이트 처리 함수 호출
-                locationService.handleLocationUpdate(location)
+                // locationServiceExample.handleLocationUpdate(location)
 
                 // 사고 정보 업데이트 요청
                 mapControllerAccident.getRoadInformation(latitude, longitude)
