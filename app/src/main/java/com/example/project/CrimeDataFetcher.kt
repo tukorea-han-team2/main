@@ -165,7 +165,7 @@ class CrimeDataFetcher(private val context: Context) {
                     marker.mapPoint = MapPoint.mapPointWithGeoCoord(latitude, longitude)
                     marker.markerType = MapPOIItem.MarkerType.RedPin
                     marker.isShowCalloutBalloonOnTouch = true
-                    // marker.tag = murderRate.toInt() // 마커에 살인 발생률 정보를 태그로 추가
+                    marker.userObject = Pair(cityName, murderRate) // 마커에 사용자 객체 설정
                     marker.setCustomImageAnchor(0.5f, 1.0f)
                     markers.add(marker)
                 }
@@ -214,7 +214,7 @@ class CrimeDataFetcher(private val context: Context) {
                     marker.mapPoint = MapPoint.mapPointWithGeoCoord(latitude, longitude)
                     marker.markerType = MapPOIItem.MarkerType.RedPin
                     marker.isShowCalloutBalloonOnTouch = true
-                    // marker.tag = murderRate.toInt() // 마커에 살인 발생률 정보를 태그로 추가
+                    marker.userObject = Pair(cityName, murderRate) // 마커에 사용자 객체 설정
                     marker.setCustomImageAnchor(0.5f, 1.0f)
                     markers.add(marker)
                 }
@@ -225,5 +225,6 @@ class CrimeDataFetcher(private val context: Context) {
 
         return markers
     }
+
 
 }

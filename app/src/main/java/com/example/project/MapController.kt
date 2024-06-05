@@ -1,7 +1,9 @@
 package com.example.project
 
 
+import android.content.Context
 import android.util.Log
+import androidx.appcompat.app.AlertDialog
 import kotlinx.coroutines.*
 import net.daum.mf.map.api.MapPOIItem
 import net.daum.mf.map.api.MapPoint
@@ -12,7 +14,7 @@ import net.daum.mf.map.api.MapView.MapViewEventListener
 class MapController(
     private val mapView: MapView,
     private val crimeDataFetcher: CrimeDataFetcher
-) : CurrentLocationEventListener, MapViewEventListener {
+) : CurrentLocationEventListener, MapViewEventListener, MapView.POIItemEventListener {
 
     private lateinit var kakaoMap: MapView
 
@@ -32,6 +34,7 @@ class MapController(
     init {
         mapView.setMapViewEventListener(this)
         mapView.setCurrentLocationEventListener(this)
+        mapView.setPOIItemEventListener(this) // POIItemEventListener 설정
     }
 
     override fun onMapViewInitialized(mapView: MapView?) {
@@ -127,7 +130,6 @@ class MapController(
 
     fun initialize() {
         mapView.setZoomLevel(15, true)
-
         this.kakaoMap = mapView
     }
 
@@ -137,5 +139,38 @@ class MapController(
 
     override fun onCurrentLocationUpdateCancelled(p0: MapView?) {
         // 이벤트 핸들러 구현
+    }
+
+    // 마커 클릭 이벤트 처리 메서드 추가
+    override fun onPOIItemSelected(mapView: MapView?, poiItem: MapPOIItem?) {
+        poiItem?.let {
+            val userObject = it.userObject
+            if (userObject is Pair<*, *>) {
+                val (cityName, murderRate) = userObject as Pair<String, Double>
+                showMarkerInfoDialog(mapView?.context, cityName, murderRate)
+            }
+        }
+    }
+
+    private fun showMarkerInfoDialog(context: Context?, cityName: String, murderRate: Double) {
+        context?.let {
+            val builder = AlertDialog.Builder(it)
+            builder.setTitle("지역 정보")
+            builder.setMessage("시도 지역: $cityName\n평균 위험도: $murderRate")
+            builder.setPositiveButton("확인", null)
+            builder.show()
+        }
+    }
+
+    override fun onCalloutBalloonOfPOIItemTouched(mapView: MapView?, poiItem: MapPOIItem?) {
+        // 기본 마커의 말풍선 클릭 시 호출되는 메서드
+    }
+
+    override fun onCalloutBalloonOfPOIItemTouched(mapView: MapView?, poiItem: MapPOIItem?, buttonType: MapPOIItem.CalloutBalloonButtonType?) {
+        // 말풍선 클릭 시 호출되는 메서드
+    }
+
+    override fun onDraggablePOIItemMoved(mapView: MapView?, poiItem: MapPOIItem?, mapPoint: MapPoint?) {
+        // 드래그 가능한 마커를 이동시킬 때 호출되는 메서드
     }
 }
