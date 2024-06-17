@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private val locationRequest: LocationRequest = LocationRequest.create()
     private var selectedLevel: Int = 4 // 선택된 위험도 레벨 변수 추가 및 초기화
 
+
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -103,10 +104,25 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
+        val btnOpenPostActivity: Button = findViewById(R.id.btnOpenPostActivity)
+        btnOpenPostActivity.setOnClickListener {
+            val intent = Intent(this, PostActivity::class.java)
+            startActivity(intent)
+        }
+
+        // 게시글 보기 버튼 클릭 이벤트 설정
+        val btnViewPosts: Button = findViewById(R.id.btnViewPosts)
+        btnViewPosts.setOnClickListener {
+            val intent = Intent(this, PostListActivity::class.java)
+            startActivity(intent)
+        }
+
         // 위치 업데이트 주기 설정
         locationRequest.interval = 20000 // 20초마다 업데이트
         locationRequest.fastestInterval = 10000 // 최소 10초 간격으로 업데이트
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+
+
     }
 
 
