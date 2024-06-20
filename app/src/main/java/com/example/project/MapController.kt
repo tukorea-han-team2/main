@@ -149,8 +149,10 @@ class MapController(
                 val (cityName, murderRate) = userObject as Pair<String, Double>
                 showMarkerInfoDialog(mapView?.context, cityName, murderRate)
             }
+
         }
     }
+
 
     private fun showMarkerInfoDialog(context: Context?, cityName: String, murderRate: Double) {
         context?.let {

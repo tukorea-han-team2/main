@@ -25,8 +25,7 @@ class PostListActivity : AppCompatActivity() {
         adapter = PostAdapter(emptyList()) // 초기화된 게시글 목록
         recyclerView.adapter = adapter
 
-        // ApiService 초기화
-        apiService = RetrofitClient.instance
+
 
         // 서버에서 게시글 목록 가져오기
         fetchPosts()

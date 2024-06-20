@@ -30,7 +30,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Id"
+                    android:text="ID"
                     android:textStyle="bold"
                     android:textSize="16sp"
                     android:paddingBottom="8dp"/>
@@ -39,17 +39,17 @@
                     android:id="@+id/id"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Enter Id"
-                    android:inputType="textMultiLine"
+                    android:hint="ID"
+                    android:inputType="none"
                     android:padding="8dp"
                     android:background="@drawable/edit_text_background"
-                    android:minHeight="48dp"/>
+                    android:minHeight="48dp"
+                    />
             </LinearLayout>
 
         </androidx.cardview.widget.CardView>
 
-
-    <!-- Description Card -->
+        <!-- Description Card -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -110,7 +110,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Latitude"
-                    android:inputType="numberDecimal"
+                    android:inputType="none"
                     android:padding="8dp"
                     android:background="@drawable/edit_text_background"
                     android:layout_marginBottom="8dp"
@@ -121,11 +121,12 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Longitude"
-                    android:inputType="numberDecimal"
+                    android:inputType="none"
                     android:padding="8dp"
                     android:background="@drawable/edit_text_background"
                     android:layout_marginBottom="8dp"
                     android:minHeight="48dp"/>
+
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -151,7 +152,7 @@
                     android:textSize="16sp"
                     android:paddingBottom="8dp"/>
 
-                <EditText
+                <Spinner
                     android:id="@+id/category"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -163,6 +164,8 @@
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>
+
+
 
         <!-- Image and Buttons Card -->
         <androidx.cardview.widget.CardView

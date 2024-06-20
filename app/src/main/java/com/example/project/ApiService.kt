@@ -18,7 +18,7 @@ interface ApiService {
         @Part image: MultipartBody.Part
     ): Call<PostWithImage>
 
-    @FormUrlEncoded
+    /*@FormUrlEncoded
     @POST("senddata/create/")  // 수정된 엔드포인트
     fun uploadPostWithoutImage(
         @Field("id") id: String,
@@ -26,7 +26,7 @@ interface ApiService {
         @Field("latitude") latitude: String,
         @Field("longitude") longitude: String,
         @Field("category") category: String
-    ): Call<PostWithoutImage>
+    ): Call<PostWithoutImage>*/
 
     // 게시글 목록 가져오기
     @GET("senddata/post/")

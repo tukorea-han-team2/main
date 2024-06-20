@@ -37,27 +37,15 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/crime_button"
             android:layout_alignParentStart="true"
+            android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
             android:layout_marginStart="0dp"
             android:layout_marginTop="584dp"
+            android:layout_marginEnd="323dp"
             android:layout_marginBottom="21dp"
             android:contentDescription="Open Post Activity Button"
-            android:text="Open Post Activity" />
+            android:text="Post" />
 
-        <Button
-            android:id="@+id/btnViewPosts"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/crime_button"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentBottom="true"
-            android:layout_marginStart="63dp"
-            android:layout_marginTop="584dp"
-            android:layout_marginEnd="45dp"
-            android:layout_marginBottom="21dp"
-            android:layout_toEndOf="@+id/btnOpenPostActivity"
-            android:contentDescription="View Posts Button"
-            android:text="게시글 보기" />
 
     </RelativeLayout>
 

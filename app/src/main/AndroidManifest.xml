@@ -6,7 +6,10 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34"
+
+    <uses-sdk
+        android:minSdkVersion="23"
+        android:targetSdkVersion="34"
         tools:ignore="GradleOverrides" />
 
     <application
@@ -17,35 +20,32 @@
         tools:targetApi="tiramisu"
         android:enableOnBackInvokedCallback="true">
 
+        <!-- Main Activity -->
         <activity
             android:name=".LoginActivity"
-        android:exported="true">
-        <intent-filter>
-            <action android:name="android.intent.action.MAIN" />
-            <category android:name="android.intent.category.LAUNCHER" />
-        </intent-filter>
-    </activity>
-
-    <activity
-        android:name=".MainActivity">
-    </activity>
-
-    <activity
-       android:name=".JoinActivity">
-    </activity>
-
-        <activity
-            android:name=".AlarmSetActivity">
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
         </activity>
 
-        <activity android:name=".PostActivity">
-        </activity>
-
+        <activity android:name=".MainActivity" />
+        <activity android:name=".JoinActivity" />
+        <activity android:name=".AlarmSetActivity" />
+        <activity android:name=".PostActivity" />
         <activity android:name=".PostListActivity" />
+        <activity android:name=".PostDetailsActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
 
+        <!-- Kakao SDK Metadata -->
         <meta-data
-        android:name="com.kakao.sdk.AppKey"
-        android:value="c5d785b57e0418b7b6adba82a298d5f7"/>
-
-</application>
-    </manifest>
+            android:name="com.kakao.sdk.AppKey"
+            android:value="c5d785b57e0418b7b6adba82a298d5f7"/>
+    </application>
+</manifest>

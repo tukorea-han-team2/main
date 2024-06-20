@@ -6,29 +6,34 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.util.Log
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.ImageButton
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
 import kotlinx.coroutines.*
+import net.daum.mf.map.api.MapPOIItem
+import net.daum.mf.map.api.MapPoint
 import net.daum.mf.map.api.MapView
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(),  MapView.POIItemEventListener{
     private lateinit var locationServiceExample: LocationServiceExample
-
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var mapView: MapView
-    private lateinit var crime: Crime
     private lateinit var mapController: MapController
     private lateinit var mapControllerAccident: MapControllerAccident
     private lateinit var alarmSet: AlarmSet
     private var gpsUse: Boolean? = null
     private val locationRequest: LocationRequest = LocationRequest.create()
-    private var selectedLevel: Int = 4 // 선택된 위험도 레벨 변수 추가 및 초기화
+    private var selectedLevel: Int = 4
+    private var markers = mutableListOf<MapPOIItem>()
+    private lateinit var apiService: ApiService
+    private lateinit var posts: List<Post>
 
 
     @SuppressLint("MissingInflatedId")
@@ -36,39 +41,31 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // 사용자가 이전에 선택한 위험도 불러오기
-        val sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
-        selectedLevel = sharedPreferences.getInt("selectedLevel", 4) // 기본값은 4로 설정
+        apiService = RetrofitClient.apiService
 
-        // 추가된 부분: MainActivity로부터 전달된 선택된 레벨 가져오기
+        val sharedPreferences = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
+        selectedLevel = sharedPreferences.getInt("selectedLevel", 4)
+
         val selectedLevelFromAlarmSet = intent.getIntExtra("SELECTED_LEVEL", -1)
         if (selectedLevelFromAlarmSet != -1) {
             selectedLevel = selectedLevelFromAlarmSet
-            // Save the new selected level to SharedPreferences
             sharedPreferences.edit().putInt("selectedLevel", selectedLevel).apply()
         }
 
-        // FusedLocationProviderClient 초기화
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
-
-        // 위치 서비스 초기화
         locationServiceExample = LocationServiceExample(this)
         locationServiceExample.setSelectedLevel(selectedLevel)
-        crime = Crime(this)
         alarmSet = AlarmSet(this, locationServiceExample)
 
-        // 위치 서비스 시작
         locationServiceExample.startLocationUpdates()
-
-        // 위치 권한 체크 및 요청
         checkLocationPermission()
 
-        // MapView 초기화
         mapView = MapView(this)
         val mapViewContainer: ViewGroup = findViewById(R.id.map_view)
         mapViewContainer.addView(mapView)
 
-        // GPS 체크
+        mapView.setPOIItemEventListener(this)
+
         gpsCheck()
 
         val crimeButton: Button = findViewById(R.id.crime_button)
@@ -83,9 +80,7 @@ class MainActivity : AppCompatActivity() {
 
         accidentButton.setOnClickListener {
             clearMarkers()
-            // MapControllerAccident 클래스 초기화
             mapControllerAccident = MapControllerAccident(this)
-            // 현재 위치를 가져와서 해당 위치의 도로 정보를 가져옵니다.
             fetchCurrentLocationForAccident()
         }
 
@@ -97,7 +92,6 @@ class MainActivity : AppCompatActivity() {
             onZoomOutButtonClick(mapView)
         }
 
-        // 추가된 부분: Alarm 버튼 클릭 이벤트 처리
         val alarmButton: ImageButton = findViewById(R.id.alarmButton)
         alarmButton.setOnClickListener {
             val intent = Intent(this, AlarmSetActivity::class.java)
@@ -110,42 +104,99 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
         }
 
-        // 게시글 보기 버튼 클릭 이벤트 설정
-        val btnViewPosts: Button = findViewById(R.id.btnViewPosts)
-        btnViewPosts.setOnClickListener {
-            val intent = Intent(this, PostListActivity::class.java)
-            startActivity(intent)
-        }
-
-        // 위치 업데이트 주기 설정
-        locationRequest.interval = 20000 // 20초마다 업데이트
-        locationRequest.fastestInterval = 10000 // 최소 10초 간격으로 업데이트
+        locationRequest.interval = 20000
+        locationRequest.fastestInterval = 10000
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
 
+        fetchPosts()
+    }
+
+    private fun fetchPosts() {
+        apiService.getPosts().enqueue(object : Callback<List<Post>> {
+            override fun onResponse(call: Call<List<Post>>, response: Response<List<Post>>) {
+                if (response.isSuccessful) {
+                    posts = response.body() ?: emptyList()
+                    addMarkers()
+                } else {
+                    Toast.makeText(this@MainActivity, "게시글을 불러오지 못했습니다.", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onFailure(call: Call<List<Post>>, t: Throwable) {
+                Toast.makeText(this@MainActivity, "네트워크 오류: ${t.message}", Toast.LENGTH_SHORT).show()
+            }
+        })
+    }
+
+    private fun addMarkers() {
+        for ((index, post) in posts.withIndex()) {
+            val marker = MapPOIItem()
+            marker.itemName = post.category
+            marker.tag = index
+            marker.mapPoint = MapPoint.mapPointWithGeoCoord(post.latitude, post.longitude)
+            marker.markerType = MapPOIItem.MarkerType.BluePin
+            //marker.isShowCalloutBalloonOnTouch = true // 말풍선 터치 이벤트 활성화
+            mapView.addPOIItem(marker)
+        }
+    }
+
+    override fun onPOIItemSelected(mapView: MapView?, marker: MapPOIItem?) {
+        marker?.let {
+            val postId = marker.tag as? Int
+            postId?.let {
+                val post = posts.getOrNull(postId)
+                post?.let {
+                    Log.d("MainActivity", "Selected post: ${post.description}, ${post.category}")
+                    showPostDetails(post)
+                } ?: Log.e("MainActivity", "post is null for postId $postId")
+            } ?: Log.e("MainActivity", "postId is null")
+        } ?: Log.e("MainActivity", "marker is null")
+    }
+
+    override fun onCalloutBalloonOfPOIItemTouched(mapView: MapView?, marker: MapPOIItem?) {
+        // 말풍선 클릭 시 (Deprecated)
+
+    }
+
+    override fun onCalloutBalloonOfPOIItemTouched(
+        mapView: MapView?,
+        marker: MapPOIItem?,
+        aa: MapPOIItem.CalloutBalloonButtonType?
+    ) {
 
     }
 
 
+    override fun onDraggablePOIItemMoved(mapView: MapView?, poiItem: MapPOIItem?, mapPoint: MapPoint?) {
+        // 마커의 속성 중 isDraggable = true 일 때 마커를 이동시켰을 경우
+    }
+
+    private fun showPostDetails(post: Post) {
+        val intent = Intent(this@MainActivity, PostDetailsActivity::class.java).apply {
+            putExtra("description", post.description)
+            putExtra("category", post.category)
+            putExtra("image", post.imageUrl)
+        }
+        startActivity(intent)
+    }
+
     fun onZoomInButtonClick(mapView: MapView) {
-        // 맵의 줌 레벨을 확대합니다.
         val currentZoomLevel = mapView.zoomLevel
         mapView.setZoomLevel(currentZoomLevel + 1, true)
     }
 
     fun onZoomOutButtonClick(mapView: MapView) {
-        // 맵의 줌 레벨을 축소합니다.
         val currentZoomLevel = mapView.zoomLevel
         mapView.setZoomLevel(currentZoomLevel - 1, true)
     }
 
+    private fun showCrimeMarkersAndPolygons() {
 
-
-    private fun showCrimeMarkersAndPolygons(){
-        val mapDataFetcher = MapDataFetcher(this)
         val crimeDataFetcher = CrimeDataFetcher(this)
         mapController = MapController(mapView, crimeDataFetcher)
         mapController.initialize()
     }
+
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -153,28 +204,16 @@ class MainActivity : AppCompatActivity() {
             if (location != null) {
                 val latitude = location.latitude
                 val longitude = location.longitude
-
-                // 위치 서비스 내부의 위치 업데이트 처리 함수 호출
-                // locationServiceExample.handleLocationUpdate(location)
-
-                // 사고 정보 업데이트 요청
                 mapControllerAccident.getRoadInformation(latitude, longitude)
             }
         }
     }
-    private fun fetchCurrentLocationForAccident() {
 
-        // 위치 권한이 있는지 확인
+    private fun fetchCurrentLocationForAccident() {
         if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return
         }
-
-        // 위치 업데이트 요청
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null)
-    }
-
-    private fun clearPolygons() {
-        mapView.removeAllPolylines() // 기존 다각형 삭제
     }
 
     private fun clearMarkers() {
@@ -184,7 +223,6 @@ class MainActivity : AppCompatActivity() {
     private fun checkLocationPermission() {
         val permission = android.Manifest.permission.ACCESS_FINE_LOCATION
         if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-            // 권한이 없는 경우 권한 요청
             ActivityCompat.requestPermissions(this, arrayOf(permission), REQUEST_LOCATION_PERMISSION)
         }
     }
@@ -209,28 +247,26 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == REQUEST_LOCATION_PERMISSION) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // 위치 권한이 허용되면 현재 위치 가져오기
                 fetchCurrentLocationForAccident()
             } else {
-                // 위치 권한이 거부되면 메시지 표시
                 Toast.makeText(this, "위치 권한이 거부되어 현재 위치를 가져올 수 없습니다.", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
+
+
+
+
     companion object {
         private const val REQUEST_LOCATION_PERMISSION = 1
     }
 
-
-
     private fun stopLocationUpdates() {
         fusedLocationClient.removeLocationUpdates(locationCallback)
     }
-
 }

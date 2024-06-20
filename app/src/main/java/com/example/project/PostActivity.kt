@@ -1,15 +1,20 @@
 package com.example.project
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
 import android.net.Uri
 import android.os.Bundle
 import android.provider.MediaStore
-import android.widget.Button
-import android.widget.EditText
-import android.widget.ImageView
-import android.widget.Toast
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
+import com.google.firebase.auth.FirebaseAuth
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -22,6 +27,12 @@ class PostActivity : AppCompatActivity() {
 
     private lateinit var imageView: ImageView
     private lateinit var selectedImageUri: Uri
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+
+    private lateinit var userId: String
+    private var latitude: Double = 0.0
+    private var longitude: Double = 0.0
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,11 +42,33 @@ class PostActivity : AppCompatActivity() {
         val descriptionEditText: EditText = findViewById(R.id.description)
         val latitudeEditText: EditText = findViewById(R.id.latitude)
         val longitudeEditText: EditText = findViewById(R.id.longitude)
-        val categoryEditText: EditText = findViewById(R.id.category)
+        //val categoryEditText: EditText = findViewById(R.id.category)
+        val categorySpinner: Spinner = findViewById(R.id.category)
         imageView = findViewById(R.id.imageView)
         val selectImageButton: Button = findViewById(R.id.selectImage)
         val uploadButton: Button = findViewById(R.id.upload)
 
+        // User ID 가져오기
+        val auth = FirebaseAuth.getInstance()
+        val currentUser = auth.currentUser
+        userId = currentUser?.uid ?: ""
+        idEditText.setText(userId)
+
+        // 위치 정보 가져오기
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        getLastLocation(latitudeEditText, longitudeEditText)
+
+        // 카테고리 Spinner 설정
+        ArrayAdapter.createFromResource(
+            this,
+            R.array.categories_array,
+            android.R.layout.simple_spinner_item
+        ).also { adapter ->
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            categorySpinner.adapter = adapter
+        }
+
+        // 이미지 선택 버튼 클릭 리스너
         selectImageButton.setOnClickListener {
             val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
                 type = "image/*"
@@ -43,18 +76,36 @@ class PostActivity : AppCompatActivity() {
             startActivityForResult(intent, 1)
         }
 
+
+        // 업로드 버튼 클릭 리스너
         uploadButton.setOnClickListener {
             val id = idEditText.text.toString()
             val description = descriptionEditText.text.toString()
             val latitude = latitudeEditText.text.toString()
             val longitude = longitudeEditText.text.toString()
-            val category = categoryEditText.text.toString()
+            val category = categorySpinner.selectedItem.toString()
 
             if (::selectedImageUri.isInitialized) {
-                uploadPostWithImage(id, description, latitude, longitude, category)
+                uploadPost(id, description, latitude, longitude, category)
             } else {
-                uploadPostWithoutImage(id, description, latitude, longitude, category)
+                Toast.makeText(this, "Please fill all fields and select an image.", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun getLastLocation(latitudeEditText: EditText, longitudeEditText: EditText) {
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+                if (location != null) {
+                    latitude = location.latitude
+                    longitude = location.longitude
+                    latitudeEditText.setText(latitude.toString())
+                    longitudeEditText.setText(longitude.toString())
+                }
+            }
+        } else {
+            ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), LOCATION_PERMISSION_REQUEST_CODE)
         }
     }
 
@@ -66,14 +117,13 @@ class PostActivity : AppCompatActivity() {
         }
     }
 
-    private fun uploadPostWithImage(id: String, description: String, latitude: String, longitude: String, category: String) {
+    private fun uploadPost(id: String, description: String, latitude: String, longitude: String, category: String) {
         val idPart = RequestBody.create("text/plain".toMediaTypeOrNull(), id)
         val descriptionPart = RequestBody.create("text/plain".toMediaTypeOrNull(), description)
         val latitudePart = RequestBody.create("text/plain".toMediaTypeOrNull(), latitude)
         val longitudePart = RequestBody.create("text/plain".toMediaTypeOrNull(), longitude)
         val categoryPart = RequestBody.create("text/plain".toMediaTypeOrNull(), category)
 
-        // Convert content URI to file path
         val filePath = getFilePathFromUri(this, selectedImageUri)
         if (filePath == null) {
             Toast.makeText(this, "Failed to get image path", Toast.LENGTH_SHORT).show()
@@ -84,11 +134,21 @@ class PostActivity : AppCompatActivity() {
         val requestFile = RequestBody.create(contentResolver.getType(selectedImageUri)!!.toMediaTypeOrNull(), file)
         val imagePart = MultipartBody.Part.createFormData("image", file.name, requestFile)
 
-        val call = RetrofitClient.instance.uploadPostWithImage(idPart, descriptionPart, latitudePart, longitudePart, categoryPart, imagePart)
+        val call = RetrofitClient.apiService.uploadPostWithImage(idPart, descriptionPart, latitudePart, longitudePart, categoryPart, imagePart)
         call.enqueue(object : Callback<PostWithImage> {
             override fun onResponse(call: Call<PostWithImage>, response: Response<PostWithImage>) {
                 if (response.isSuccessful) {
                     Toast.makeText(this@PostActivity, "Post with image uploaded successfully", Toast.LENGTH_SHORT).show()
+
+                    // MainActivity로 이동하여 위치 정보 전달
+                    val intent = Intent(this@PostActivity, MainActivity::class.java).apply {
+                        putExtra("latitude", latitude.toDouble())
+                        putExtra("longitude", longitude.toDouble())
+                        putExtra("description", description)
+                        putExtra("category", category)
+                        putExtra("imageUrl", selectedImageUri.toString())  // 이미지 URL 전달
+                    }
+                    startActivity(intent)
                 } else {
                     Toast.makeText(this@PostActivity, "Upload failed: ${response.message()}", Toast.LENGTH_SHORT).show()
                 }
@@ -100,8 +160,6 @@ class PostActivity : AppCompatActivity() {
         })
     }
 
-
-    // Function to get file path from URI
     private fun getFilePathFromUri(uri1: PostActivity, uri: Uri): String? {
         var filePath: String? = null
         val cursor = contentResolver.query(uri, null, null, null, null)
@@ -113,20 +171,10 @@ class PostActivity : AppCompatActivity() {
         return filePath
     }
 
-    private fun uploadPostWithoutImage(id: String, description: String, latitude: String, longitude: String, category: String) {
-        val call = RetrofitClient.instance.uploadPostWithoutImage(id, description, latitude, longitude, category)
-        call.enqueue(object : Callback<PostWithoutImage> {
-            override fun onResponse(call: Call<PostWithoutImage>, response: Response<PostWithoutImage>) {
-                if (response.isSuccessful) {
-                    Toast.makeText(this@PostActivity, "Post without image uploaded successfully", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(this@PostActivity, "Upload failed: ${response.message()}", Toast.LENGTH_SHORT).show()
-                }
-            }
 
-            override fun onFailure(call: Call<PostWithoutImage>, t: Throwable) {
-                Toast.makeText(this@PostActivity, "Upload failed: ${t.message}", Toast.LENGTH_SHORT).show()
-            }
-        })
+    companion object {
+        private const val REQUEST_IMAGE_PICK = 100
+        private const val LOCATION_PERMISSION_REQUEST_CODE = 101 // 추가
     }
+
 }

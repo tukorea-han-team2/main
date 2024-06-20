@@ -3,4 +3,12 @@
     <string name="zoom_in_description">Zoom In</string>
     <string name="zoom_out_description">Zoom Out</string>
     <string name="alarm_description">Alarm</string>
+
+    <string name="category_spinner_description">Choose a category for your post</string>
+    <string name="category_prompt">Select a category</string>
+    <string-array name="categories_array">
+        <item>범죄</item>
+        <item>교통사고</item>
+    </string-array>
+
 </resources>
