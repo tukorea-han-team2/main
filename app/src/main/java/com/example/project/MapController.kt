@@ -129,8 +129,15 @@ class MapController(
     }
 
     fun initialize() {
-        mapView.setZoomLevel(15, true)
+        mapView.setZoomLevel(3, true)
         this.kakaoMap = mapView
+    }
+
+    fun clear() {
+        // 작업 취소 및 마커 제거
+        job?.cancel()
+        clearMarkers()
+        currentLocation = null
     }
 
     override fun onCurrentLocationUpdateFailed(p0: MapView?) {

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/menu_accident_info"
+        android:title="Accident Info" />
+    <item
+        android:id="@+id/menu_alarm_settings"
+        android:title="Alarm Settings" />
+    <item
+        android:id="@+id/menu_post"
+        android:title="Post" />
+</menu>

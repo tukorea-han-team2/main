@@ -7,104 +7,59 @@
     <RelativeLayout
         android:id="@+id/map_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent" />
 
-        <Button
-            android:id="@+id/accident_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
-            android:layout_alignParentEnd="true"
-            android:layout_marginTop="32dp"
-            android:layout_marginEnd="28dp"
-            android:text="Accident"
-            android:contentDescription="Accident Button" />
-
-        <Button
-            android:id="@+id/crime_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
-            android:layout_marginTop="30dp"
-            android:layout_marginEnd="10dp"
-            android:layout_toStartOf="@+id/accident_button"
-            android:text="Crime"
-            android:contentDescription="Crime Button" />
-
-        <Button
-            android:id="@+id/btnOpenPostActivity"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@+id/crime_button"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentEnd="true"
-            android:layout_alignParentBottom="true"
-            android:layout_marginStart="0dp"
-            android:layout_marginTop="584dp"
-            android:layout_marginEnd="323dp"
-            android:layout_marginBottom="21dp"
-            android:contentDescription="Open Post Activity Button"
-            android:text="Post" />
-
-
-    </RelativeLayout>
-
+    <!-- 메뉴 버튼을 상단 우측에 배치 -->
     <ImageButton
-        android:id="@+id/alarmButton"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_alignParentStart="true"
+        android:id="@+id/menuButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginStart="30dp"
-        android:layout_marginTop="30dp"
-        android:layout_marginEnd="331dp"
-        android:layout_marginBottom="651dp"
+        android:layout_margin="16dp"
         android:background="@android:color/transparent"
-        android:contentDescription="@string/alarm_description"
-        android:padding="0dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/alarm"
-        tools:ignore="OnClick" />
+        android:contentDescription="Menu Button"
+        android:src="@drawable/menu" />
 
-    <ImageButton
-        android:id="@+id/zoomOutButton"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
+    <!-- 하단에 직사각형 레이아웃을 추가 -->
+    <LinearLayout
+        android:id="@+id/bottom_menu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginStart="350dp"
-        android:layout_marginTop="180dp"
-        android:layout_marginEnd="5dp"
-        android:layout_marginBottom="499dp"
-        android:background="@android:color/transparent"
-        android:contentDescription="@string/zoom_out_description"
-        android:padding="0dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/zoom_out"
-        tools:ignore="OnClick" />
+        android:orientation="horizontal"
+        android:background="@drawable/border"
+        android:padding="10dp">
 
-    <ImageButton
-        android:id="@+id/zoomInButton"
-        android:layout_width="50dp"
-        android:layout_height="50dp"
-        android:layout_alignParentStart="true"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentBottom="true"
-        android:layout_marginStart="350dp"
-        android:layout_marginTop="280dp"
-        android:layout_marginEnd="5dp"
-        android:layout_marginBottom="399dp"
-        android:background="@android:color/transparent"
-        android:contentDescription="@string/zoom_in_description"
-        android:padding="0dp"
-        android:scaleType="fitCenter"
-        android:src="@drawable/zoom_in"
-        tools:ignore="OnClick" />
+        <ImageButton
+            android:id="@+id/zoomOutButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:contentDescription="Zoom Out Button"
+            android:src="@drawable/zoom_out"
+            android:minWidth="48dp"
+            android:minHeight="48dp" />
 
+        <!-- 가운데 선 추가 -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:background="#000000"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp" />
+
+        <ImageButton
+            android:id="@+id/zoomInButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:contentDescription="Zoom In Button"
+            android:src="@drawable/zoom_in"
+            android:minWidth="48dp"
+            android:minHeight="48dp" />
+    </LinearLayout>
 
 </RelativeLayout>

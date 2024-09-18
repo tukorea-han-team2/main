@@ -7,8 +7,11 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
+import android.view.MenuItem
+import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -25,8 +28,8 @@ class MainActivity : AppCompatActivity(),  MapView.POIItemEventListener{
     private lateinit var locationServiceExample: LocationServiceExample
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var mapView: MapView
-    private lateinit var mapController: MapController
-    private lateinit var mapControllerAccident: MapControllerAccident
+    private var mapController: MapController? = null
+    private var mapControllerAccident: MapControllerAccident? = null
     private lateinit var alarmSet: AlarmSet
     private var gpsUse: Boolean? = null
     private val locationRequest: LocationRequest = LocationRequest.create()
@@ -34,12 +37,17 @@ class MainActivity : AppCompatActivity(),  MapView.POIItemEventListener{
     private var markers = mutableListOf<MapPOIItem>()
     private lateinit var apiService: ApiService
     private lateinit var posts: List<Post>
+    // 범죄 마커를 관리하는 리스트
+    private var crimeMarkers = mutableListOf<MapPOIItem>()
+    private var selectedDangerLevel: Int = 1
 
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        supportActionBar?.title = "Danger Detection System"
 
         apiService = RetrofitClient.apiService
 
@@ -68,21 +76,8 @@ class MainActivity : AppCompatActivity(),  MapView.POIItemEventListener{
 
         gpsCheck()
 
-        val crimeButton: Button = findViewById(R.id.crime_button)
-        val accidentButton: Button = findViewById(R.id.accident_button)
         val zoomInButton: ImageButton = findViewById(R.id.zoomInButton)
         val zoomOutButton: ImageButton = findViewById(R.id.zoomOutButton)
-
-        crimeButton.setOnClickListener {
-            stopLocationUpdates()
-            showCrimeMarkersAndPolygons()
-        }
-
-        accidentButton.setOnClickListener {
-            clearMarkers()
-            mapControllerAccident = MapControllerAccident(this)
-            fetchCurrentLocationForAccident()
-        }
 
         zoomInButton.setOnClickListener {
             onZoomInButtonClick(mapView)
@@ -92,23 +87,130 @@ class MainActivity : AppCompatActivity(),  MapView.POIItemEventListener{
             onZoomOutButtonClick(mapView)
         }
 
-        val alarmButton: ImageButton = findViewById(R.id.alarmButton)
-        alarmButton.setOnClickListener {
-            val intent = Intent(this, AlarmSetActivity::class.java)
-            startActivity(intent)
-        }
-
-        val btnOpenPostActivity: Button = findViewById(R.id.btnOpenPostActivity)
-        btnOpenPostActivity.setOnClickListener {
-            val intent = Intent(this, PostActivity::class.java)
-            startActivity(intent)
-        }
-
         locationRequest.interval = 20000
         locationRequest.fastestInterval = 10000
         locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
 
         fetchPosts()
+
+        // 메뉴 버튼 추가 및 클릭 이벤트 설정
+        val menuButton: ImageButton = findViewById(R.id.menuButton)
+        menuButton.setOnClickListener {
+            showMenu(menuButton)
+        }
+    }
+
+    private fun showMenu(view: ImageButton) {
+        val popupMenu = PopupMenu(this, view)
+        popupMenu.menuInflater.inflate(R.menu.menu_main, popupMenu.menu)
+        popupMenu.setOnMenuItemClickListener { menuItem: MenuItem ->
+            when (menuItem.itemId) {
+                R.id.menu_accident_info -> {
+                    // Accident Info 클릭 시 서브 메뉴 표시
+                    showAccidentInfoMenu()
+                    true
+                }
+                R.id.menu_alarm_settings -> {
+                    // Alarm Settings 클릭 시 동작
+                    //val intent = Intent(this, AlarmSetActivity::class.java)
+                    //startActivity(intent)
+                    showAlarmSettingsMenu(view)
+                    true
+                }
+                R.id.menu_post -> {
+                    // Post 클릭 시 동작
+                    val intent = Intent(this, PostActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+                else -> false
+            }
+        }
+        popupMenu.show()
+    }
+
+    // Alarm Settings 클릭 시 서브 메뉴 표시
+    private fun showAlarmSettingsMenu(view: View) {
+        val alarmSettingsMenu = PopupMenu(this, view)
+        alarmSettingsMenu.menu.add(0, 0, 0, "범죄위험도설정")
+        alarmSettingsMenu.menu.add(0, 1, 1, "교통사고위험도설정")
+
+        alarmSettingsMenu.setOnMenuItemClickListener { menuItem: MenuItem ->
+            when (menuItem.itemId) {
+                0 -> {
+                    // 범죄위험도설정을 눌렀을 때
+                    val intent = Intent(this, AlarmSetActivity::class.java)
+                    startActivity(intent)
+                    true
+                }
+                1 -> {
+                    // 교통사고위험도설정을 눌렀을 때
+                    showDangerLevelSelectionDialog() // 교통사고 위험도 선택 다이얼로그 호출
+                    true
+                }
+                else -> false
+            }
+        }
+        alarmSettingsMenu.show()
+    }
+
+    // 교통사고 위험도 선택 다이얼로그
+    private fun showDangerLevelSelectionDialog() {
+        val levels = arrayOf("1단계", "2단계", "3단계", "4단계", "5단계")
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("교통사고 위험도 선택")
+        builder.setItems(levels) { _, which ->
+            selectedDangerLevel = which + 1 // 선택한 위험도 (1~5)
+            fetchCurrentLocationForAccident() // 선택 후 교통사고 정보를 가져옴
+        }
+        builder.show()
+    }
+
+    private fun showAccidentInfoMenu() {
+        val accidentInfoMenu = PopupMenu(this, findViewById(R.id.menuButton))
+        accidentInfoMenu.menuInflater.inflate(R.menu.menu_accident_info, accidentInfoMenu.menu)
+        accidentInfoMenu.setOnMenuItemClickListener { menuItem: MenuItem ->
+            when (menuItem.itemId) {
+                R.id.menu_accident -> {
+                    // Accident 클릭 시 동작
+                    stopCrimeOperations() // 범죄 관련 모든 작업 중단
+                    initializeAccidentControllerIfNeeded() // 교통사고 컨트롤러 초기화
+                    // mapControllerAccident = MapControllerAccident(this)
+                    fetchCurrentLocationForAccident()
+                    true
+                }
+                R.id.menu_crime -> {
+                    // Crime 클릭 시 동작
+                    //stopLocationUpdates()
+                    showCrimeMarkersAndPolygons()
+                    true
+                }
+                else -> false
+            }
+        }
+        accidentInfoMenu.show()
+    }
+
+    // 범죄 관련 작업 중단
+    private fun stopCrimeOperations() {
+        clearCrimeMarkers() // 범죄 마커 제거
+        mapController?.clear() // MapController에서 작업 중단 및 초기화
+        mapController = null // MapController를 null로 설정
+    }
+
+    // 범죄 마커 제거
+    private fun clearCrimeMarkers() {
+        for (marker in crimeMarkers) {
+            mapView.removePOIItem(marker)
+        }
+        crimeMarkers.clear()
+    }
+
+    // 추가된 메소드: 교통사고 컨트롤러 초기화
+    private fun initializeAccidentControllerIfNeeded() {
+        if (mapControllerAccident == null) {
+            mapControllerAccident = MapControllerAccident(this)
+        }
     }
 
     private fun fetchPosts() {
@@ -191,10 +293,16 @@ class MainActivity : AppCompatActivity(),  MapView.POIItemEventListener{
     }
 
     private fun showCrimeMarkersAndPolygons() {
-
+        clearMarkers()
+        crimeMarkers.clear()
         val crimeDataFetcher = CrimeDataFetcher(this)
         mapController = MapController(mapView, crimeDataFetcher)
-        mapController.initialize()
+        mapController!!.initialize()
+        // 마커를 crimeMarkers에 추가
+        // mapController나 CrimeDataFetcher에서 마커를 추가하는 로직에서 crimeMarkers에 추가하도록 한다.
+        for (marker in mapView.poiItems) {
+            crimeMarkers.add(marker)
+        }
     }
 
 
@@ -204,7 +312,7 @@ class MainActivity : AppCompatActivity(),  MapView.POIItemEventListener{
             if (location != null) {
                 val latitude = location.latitude
                 val longitude = location.longitude
-                mapControllerAccident.getRoadInformation(latitude, longitude)
+                mapControllerAccident?.getRoadInformation(latitude, longitude, selectedDangerLevel)
             }
         }
     }

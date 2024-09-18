@@ -1,72 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="16dp"
     tools:context=".AlarmSetActivity">
+
 
     <Button
         android:id="@+id/btnFetchCrimeData1"
-        android:layout_width="wrap_content"
+        style="@style/CustomButtonStyle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
+        android:layout_marginTop="50dp"
+        android:padding="12dp"
         android:text="1단계 이상 범죄"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/btnFetchCrimeData2"
-        android:layout_width="wrap_content"
+        style="@style/CustomButtonStyle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btnFetchCrimeData1"
-        android:layout_marginTop="20dp"
-        android:layout_alignParentTop="true"
+        android:layout_marginTop="50dp"
+        android:padding="12dp"
         android:text="2단계 이상 범죄"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnFetchCrimeData1"
-        tools:layout_editor_absoluteX="38dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnFetchCrimeData1" />
 
     <Button
         android:id="@+id/btnFetchCrimeData3"
-        android:layout_width="wrap_content"
+        style="@style/CustomButtonStyle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btnFetchCrimeData2"
-        android:layout_marginTop="32dp"
-        android:layout_alignParentTop="true"
+        android:layout_marginTop="50dp"
+        android:padding="12dp"
         android:text="3단계 이상 범죄"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnFetchCrimeData2"
-        tools:layout_editor_absoluteX="94dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnFetchCrimeData2" />
 
     <Button
         android:id="@+id/btnFetchCrimeData4"
-        android:layout_width="wrap_content"
+        style="@style/CustomButtonStyle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btnFetchCrimeData3"
-        android:layout_marginTop="132dp"
-        android:layout_alignParentTop="true"
+        android:layout_marginTop="50dp"
+        android:padding="12dp"
         android:text="4단계 이상 범죄"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnFetchCrimeData3"
-        tools:layout_editor_absoluteX="127dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnFetchCrimeData3" />
 
     <Button
         android:id="@+id/btnFetchCrimeData5"
-        android:layout_width="wrap_content"
+        style="@style/CustomButtonStyle"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btnFetchCrimeData4"
-        android:layout_alignParentTop="true"
+        android:layout_marginTop="50dp"
+        android:padding="12dp"
         android:text="5단계 이상 범죄"
-        app:layout_constraintStart_toStartOf="parent"
+
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnFetchCrimeData4"
-        app:layout_constraintVertical_bias="0.32"
-        tools:layout_editor_absoluteX="118dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnFetchCrimeData4" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -51,7 +51,7 @@ class AccidentDataFetcher(private val context: Context) {
     }
 */
     fun fetchRoadInformation(latitude: Double, longitude: Double, callback: (RoadData?) -> Unit) {
-        val url = "http://220.88.8.183:8000/senddata/road?longitude=$longitude&latitude=$latitude"
+        val url = "http://220.120.148.185:8000/senddata/road?longitude=$longitude&latitude=$latitude"
 
         val request = JsonObjectRequest(
             Request.Method.GET, url, null,

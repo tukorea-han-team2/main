@@ -8,7 +8,7 @@ class MapControllerAccident(private val context: Context) {
 
     private val accidentDataFetcher = AccidentDataFetcher(context)
 
-    fun getRoadInformation(latitude: Double, longitude: Double) {
+    fun getRoadInformation(latitude: Double, longitude: Double, selectedDangerLevel: Int) {
         accidentDataFetcher.fetchRoadInformation(latitude, longitude) { roadData ->
             roadData?.let { data ->
                 val roadName = data.road
@@ -16,7 +16,7 @@ class MapControllerAccident(private val context: Context) {
                 val dangerous = data.dangerous
 
                 // 팝업을 표시할 조건을 설정합니다.
-                if (dangerous >= 1) {
+                if (dangerous >= selectedDangerLevel) {
                     showDangerousPopup(roadName, epdo, dangerous)
                 } else {
                     // 팝업을 표시하지 않을 경우에 대한 로직을 여기에 추가할 수 있습니다.

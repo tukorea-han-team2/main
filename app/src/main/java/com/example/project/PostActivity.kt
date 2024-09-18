@@ -38,6 +38,8 @@ class PostActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_post)
 
+        supportActionBar?.title = "Post"
+
         val idEditText: EditText = findViewById(R.id.id)
         val descriptionEditText: EditText = findViewById(R.id.description)
         val latitudeEditText: EditText = findViewById(R.id.latitude)
